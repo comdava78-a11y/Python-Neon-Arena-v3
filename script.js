@@ -15,6 +15,40 @@ const FIREBASE_CONFIG = window.PY_ARENA_FIREBASE_CONFIG || {
 };
 
 const ONLINE_ROOT = "pyArenaOnlineV1";
+const PATHS = {
+  assets: {
+    defaultAvatar: "assets/avatars/default.svg",
+    localAvatarPrefix: "assets/avatars/",
+    remoteAvatarFallback: "https://api.dicebear.com/9.x/bottts/svg?seed=",
+    medals: {
+      Bronze: "assets/ui/medal-bronze.svg",
+      Silver: "assets/ui/medal-silver.svg",
+      Gold: "assets/ui/medal-gold.svg",
+      Diamond: "assets/ui/medal-diamond.svg",
+      Legendary: "assets/ui/medal-legendary.svg"
+    }
+  },
+  sounds: {
+    bgMusic: "sounds/bg-music.mp3",
+    correct: "sounds/correct.mp3",
+    wrong: "sounds/wrong.mp3",
+    tick: "sounds/tick.mp3",
+    hover: "sounds/hover.mp3",
+    intro: "sounds/intro.mp3",
+    matchFound: "sounds/match-found.mp3",
+    battleAttack: "sounds/battle-attack.mp3",
+    victory: "sounds/victory.mp3"
+  },
+  certificates: {
+    background: "certificates/certificate-bg.jpg",
+    frame: "certificates/frame.png",
+    seal: "certificates/seal.png",
+    signature: "certificates/signature.png"
+  }
+};
+const PRELOADED_IMAGES = {};
+const AVATAR_EXTENSIONS = ["png", "jpg", "jpeg", "webp", "svg"];
+
 const ONLINE_LIMITS = {
   maxScoreStep: 1600,
   maxXpStep: 550,
@@ -764,6 +798,30 @@ const AudioFX = {
   ctx: null,
   gain: null,
   musicOsc: null,
+  sounds: {},
+  preload() {
+    const entries = Object.entries(PATHS.sounds);
+    entries.forEach(([key, src]) => {
+      const audio = new Audio(src);
+      audio.preload = "auto";
+      audio.addEventListener("error", () => {
+        this.sounds[key] = null;
+      });
+      this.sounds[key] = audio;
+    });
+  },
+  playSample(name, volume = 0.3) {
+    if (state.muted) return;
+    const base = this.sounds[name];
+    if (!base) return;
+    try {
+      const audio = base.cloneNode();
+      audio.volume = Math.max(0, Math.min(1, volume));
+      audio.play().catch(() => {});
+    } catch (_err) {
+      // ignore sample playback errors
+    }
+  },
   init() {
     if (this.ctx) return;
     this.ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -787,10 +845,19 @@ const AudioFX = {
     osc.stop(now + duration);
   },
   introSound() {
+    this.playSample("intro", 0.35);
     [420, 580, 760].forEach((f, i) => setTimeout(() => this.tone(f, 0.17, "triangle", 0.08), 170 * i));
   },
   startMusic() {
     if (state.muted || this.musicOsc) return;
+    if (this.sounds.bgMusic) {
+      const music = this.sounds.bgMusic;
+      music.loop = true;
+      music.volume = 0.24;
+      music.play().catch(() => {});
+      this.musicOsc = "external";
+      return;
+    }
     this.init();
     const osc = this.ctx.createOscillator();
     const filter = this.ctx.createBiquadFilter();
@@ -808,6 +875,15 @@ const AudioFX = {
   },
   stopMusic() {
     if (!this.musicOsc) return;
+    if (this.musicOsc === "external") {
+      const music = this.sounds.bgMusic;
+      if (music) {
+        music.pause();
+        music.currentTime = 0;
+      }
+      this.musicOsc = null;
+      return;
+    }
     this.musicOsc.stop();
     this.musicOsc = null;
   }
@@ -887,6 +963,8 @@ function updateProfilePanel() {
   const p = state.profile;
   const fullName = `${p.firstName || "Player"} ${p.lastName || ""}`.trim();
   const accuracy = p.totalAnswers ? Math.round((p.totalCorrect / p.totalAnswers) * 100) : 0;
+  const avatarFile = (p.avatarSeed || "").trim();
+  const hasLocalAvatar = avatarFile && !avatarFile.startsWith("http");
   dom.profileName.textContent = fullName;
   dom.profileLevel.textContent = String(p.level);
   dom.profileXp.textContent = String(p.totalXP);
@@ -894,7 +972,13 @@ function updateProfilePanel() {
   dom.profileMistakes.textContent = String(p.mistakes);
   dom.profileAccuracy.textContent = `${accuracy}%`;
   dom.profileFavoriteMode.textContent = p.favoriteMode;
-  dom.avatarImage.src = `https://api.dicebear.com/9.x/bottts/svg?seed=${encodeURIComponent(p.avatarSeed)}`;
+  dom.avatarImage.src = hasLocalAvatar
+    ? `${PATHS.assets.localAvatarPrefix}${avatarFile}`
+    : `${PATHS.assets.remoteAvatarFallback}${encodeURIComponent(p.avatarSeed)}`;
+  dom.avatarImage.onerror = () => {
+    dom.avatarImage.onerror = null;
+    dom.avatarImage.src = PATHS.assets.defaultAvatar;
+  };
 }
 
 function unlockAchievement(title, description) {
@@ -922,9 +1006,12 @@ function renderMedals() {
   MEDALS.forEach(m => {
     const item = document.createElement("div");
     const unlocked = state.profile.medals.includes(m.key);
+    const medalSrc = PATHS.assets.medals[m.key] || "";
     item.className = `medal ${unlocked ? "unlocked" : ""}`;
     item.innerHTML = `
-      <div class="medal-icon">${m.icon}</div>
+      <div class="medal-icon">
+        <img src="${medalSrc}" alt="${m.key}" loading="lazy" onerror="this.style.display='none'; this.parentElement.textContent='${m.icon}';">
+      </div>
       <strong>${m.key}</strong>
       <svg viewBox="0 0 100 16" width="100%" height="16" aria-hidden="true">
         <path d="M0 8 H100" stroke="${unlocked ? "#22d3ee" : "#516288"}" stroke-width="2" stroke-dasharray="6 4">
@@ -1034,6 +1121,29 @@ function setReconnectPopup(show) {
 function safeNumber(value, fallback = 0) {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
+}
+
+function preloadImage(key, src) {
+  const img = new Image();
+  img.decoding = "async";
+  img.onload = () => {
+    PRELOADED_IMAGES[key] = img;
+  };
+  img.onerror = () => {
+    PRELOADED_IMAGES[key] = null;
+  };
+  img.src = src;
+}
+
+function drawImageIfReady(ctx, key, x, y, w, h) {
+  const img = PRELOADED_IMAGES[key];
+  if (!img) return false;
+  try {
+    ctx.drawImage(img, x, y, w, h);
+    return true;
+  } catch (_err) {
+    return false;
+  }
 }
 
 function shuffle(arr) {
@@ -1230,6 +1340,7 @@ function startOnlineMatch(plan, startAt) {
   state.online.startPlan = state.online.startPlan && state.online.startPlan.plan ? state.online.startPlan : { signature: `${startAt}`, plan };
   state.questions = buildFromPlan(plan);
   switchScreen("quiz");
+  AudioFX.playSample("matchFound", 0.4);
   const wait = Math.max(0, startAt - Date.now());
   setTimeout(() => {
     state.gameActive = true;
@@ -1279,7 +1390,10 @@ function renderQuestion(forceOnlyTranslate = false) {
     btn.dataset.index = String(idx);
     btn.textContent = `${String.fromCharCode(65 + idx)}. ${option}`;
     btn.addEventListener("click", () => answerQuestion(idx, btn));
-    btn.addEventListener("mouseenter", () => AudioFX.tone(640, 0.05, "square", 0.04));
+    btn.addEventListener("mouseenter", () => {
+      AudioFX.playSample("hover", 0.12);
+      AudioFX.tone(640, 0.05, "square", 0.04);
+    });
     dom.optionsGrid.appendChild(btn);
   });
   updateHUD();
@@ -1324,6 +1438,7 @@ function startTimer() {
     drawTimer();
     if (state.timer <= 8) {
       dom.timerWrap.classList.add("warning");
+      AudioFX.playSample("tick", 0.16);
       AudioFX.tone(320, 0.04, "sawtooth", 0.05);
     } else {
       dom.timerWrap.classList.remove("warning");
@@ -1388,6 +1503,7 @@ function answerQuestion(index, buttonEl) {
 
 function processCorrect(buttonEl, q, answerTime, activePlayer) {
   buttonEl.classList.add("correct");
+  AudioFX.playSample("correct", 0.42);
   AudioFX.tone(980, 0.14, "triangle", 0.12);
   drawConfetti();
   state.streak += 1;
@@ -1422,6 +1538,7 @@ function processCorrect(buttonEl, q, answerTime, activePlayer) {
 
 function processWrong(buttonEl, q, activePlayer) {
   buttonEl.classList.add("wrong");
+  AudioFX.playSample("wrong", 0.45);
   AudioFX.tone(180, 0.2, "sawtooth", 0.13);
   dom.quizCard.classList.add("shake");
   setTimeout(() => dom.quizCard.classList.remove("shake"), 340);
@@ -1542,6 +1659,7 @@ function applyEventEffect(eventKey) {
     const targetId = getTopRivalId();
     if (!targetId) return;
     sendOnline({ type: "event-attack", from: state.online.id, targetId, eventKey });
+    AudioFX.playSample("battleAttack", 0.34);
     showBattlePopup(`⚡ ${eventKey}`);
   }
 }
@@ -1756,6 +1874,7 @@ function finishGame() {
   dom.finalLevel.textContent = String(state.level);
   dom.finalStreak.textContent = String(state.bestStreak);
   dom.winnerDisplay.textContent = "";
+  AudioFX.playSample("victory", 0.42);
 
   if (state.mode === "multiplayer") {
     const p1 = state.players[0];
@@ -1913,18 +2032,28 @@ function drawCertificate(accuracy) {
   const w = dom.certificateCanvas.width;
   const h = dom.certificateCanvas.height;
   const name = `${state.profile.firstName || "Player"} ${state.profile.lastName || ""}`.trim();
+  const nameAreaStartX = 315;
+  const nameAreaEndX = 956;
+  const nameAreaCenterX = (nameAreaStartX + nameAreaEndX) / 2;
+  const nameAreaMaxWidth = nameAreaEndX - nameAreaStartX;
+  const nameY = 515;
   ctx.clearRect(0, 0, w, h);
-  const grad = ctx.createLinearGradient(0, 0, w, h);
-  grad.addColorStop(0, "#081225");
-  grad.addColorStop(1, "#122a53");
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, w, h);
-  ctx.strokeStyle = "rgba(34,211,238,0.8)";
-  ctx.lineWidth = 8;
-  ctx.strokeRect(24, 24, w - 48, h - 48);
-  ctx.strokeStyle = "rgba(255,78,205,0.45)";
-  ctx.lineWidth = 2;
-  ctx.strokeRect(50, 50, w - 100, h - 100);
+  const hasBg = drawImageIfReady(ctx, "certBackground", 0, 0, w, h);
+  if (!hasBg) {
+    const grad = ctx.createLinearGradient(0, 0, w, h);
+    grad.addColorStop(0, "#081225");
+    grad.addColorStop(1, "#122a53");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+  }
+  if (!drawImageIfReady(ctx, "certFrame", 0, 0, w, h)) {
+    ctx.strokeStyle = "rgba(34,211,238,0.8)";
+    ctx.lineWidth = 8;
+    ctx.strokeRect(24, 24, w - 48, h - 48);
+    ctx.strokeStyle = "rgba(255,78,205,0.45)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(50, 50, w - 100, h - 100);
+  }
   ctx.textAlign = "center";
   ctx.fillStyle = "#c8dcff";
   ctx.font = "700 34px Orbitron, Arial";
@@ -1937,11 +2066,18 @@ function drawCertificate(accuracy) {
   ctx.fillText("Awarded to", w / 2, 315);
   ctx.font = "700 58px Inter, Arial";
   ctx.fillStyle = "#22d3ee";
-  ctx.fillText(name, w / 2, 400);
+  ctx.fillText(name, nameAreaCenterX, nameY, nameAreaMaxWidth);
   ctx.fillStyle = "#dbe9ff";
   ctx.font = "500 30px Inter, Arial";
-  ctx.fillText(`Score: ${state.score} | Accuracy: ${accuracy}% | Level: ${state.level}`, w / 2, 500);
-  ctx.fillText(`Date: ${new Date().toLocaleDateString()}`, w / 2, 552);
+  ctx.fillText(`Score: ${state.score} | Accuracy: ${accuracy}% | Level: ${state.level}`, w / 2, 610);
+  ctx.fillText(`Date: ${new Date().toLocaleDateString()}`, w / 2, 655);
+  drawImageIfReady(ctx, "certSeal", w - 260, h - 260, 180, 180);
+  if (drawImageIfReady(ctx, "certSignature", w / 2 - 240, 700, 480, 150)) {
+    ctx.fillStyle = "#d4e4ff";
+    ctx.font = "500 22px Inter, Arial";
+    ctx.fillText("Python Arena Board", w / 2, 845);
+    return;
+  }
   ctx.fillStyle = "#ff9de8";
   ctx.font = "500 26px Inter, Arial";
   ctx.fillText("Signature: Python Arena Board", w / 2, 700);
@@ -2145,6 +2281,7 @@ async function joinRoom(codeInput = "", createIfMissing = false) {
 
   subscribeOnlineRoom();
   showPopup(t("roomConnected"));
+  AudioFX.playSample("matchFound", 0.4);
   showBattlePopup(`⚡ ${t("matchFound")}`);
   startOnlineHeartbeats();
   startAfkWatcher();
@@ -2675,7 +2812,10 @@ function initTilt() {
 function bindEvents() {
   dom.modeButtons.forEach(btn => {
     btn.addEventListener("click", () => setMode(btn.dataset.mode));
-    btn.addEventListener("mouseenter", () => AudioFX.tone(760, 0.05, "triangle", 0.04));
+    btn.addEventListener("mouseenter", () => {
+      AudioFX.playSample("hover", 0.12);
+      AudioFX.tone(760, 0.05, "triangle", 0.04);
+    });
   });
   dom.langButtons.forEach(btn => btn.addEventListener("click", () => {
     state.lang = btn.dataset.lang;
@@ -2701,7 +2841,13 @@ function bindEvents() {
   dom.readyBtn.addEventListener("click", () => setReadyOnline().catch(() => showPopup(t("roomJoinFail"))));
   dom.leaveRoomBtn.addEventListener("click", () => leaveRoom().catch(() => showPopup(t("roomJoinFail"))));
   dom.avatarRandomBtn.addEventListener("click", () => {
-    state.profile.avatarSeed = Math.random().toString(36).slice(2, 10);
+    const pickLocal = Math.random() > 0.45;
+    if (pickLocal) {
+      const localIndex = 1 + Math.floor(Math.random() * 6);
+      state.profile.avatarSeed = `avatar-${localIndex}.png`;
+    } else {
+      state.profile.avatarSeed = Math.random().toString(36).slice(2, 10);
+    }
     updateProfilePanel();
     saveProfile();
   });
@@ -2712,6 +2858,11 @@ function bindEvents() {
 }
 
 function init() {
+  AudioFX.preload();
+  preloadImage("certBackground", PATHS.certificates.background);
+  preloadImage("certFrame", PATHS.certificates.frame);
+  preloadImage("certSeal", PATHS.certificates.seal);
+  preloadImage("certSignature", PATHS.certificates.signature);
   loadProfile();
   bindEvents();
   initIntro();

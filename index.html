@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Python Neon Arena v3</title>
+  <meta property="og:title" content="Python Neon Arena v3">
+  <meta property="og:description" content="Futuristic Python quiz multiplayer platform">
+  <meta property="og:image" content="assets/og-cover.jpg">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Orbitron:wght@500;700;800&display=swap" rel="stylesheet">
@@ -43,6 +49,7 @@
   <main class="layout">
     <aside class="sidebar glass">
       <div class="brand">
+        <img src="assets/logo.svg" alt="PY ARENA" class="brand-logo" onerror="this.style.display='none'">
         <h2>PY ARENA</h2>
         <p>multiplayer platform</p>
       </div>
@@ -56,7 +63,7 @@
       <section class="profile-card glass-inner">
         <h3 data-i18n="profileTitle">Профиль игрока</h3>
         <div class="avatar-wrap">
-          <img id="avatarImage" src="https://api.dicebear.com/9.x/bottts/svg?seed=PythonArena" alt="avatar">
+          <img id="avatarImage" src="assets/avatars/default.svg" alt="avatar">
           <button id="avatarRandomBtn" class="neo-btn small" data-i18n="avatarRandom">Случайный</button>
         </div>
         <p id="profileName">Player</p>
