@@ -815,6 +815,7 @@ const dom = {
   openInviteBtn: document.getElementById("openInviteBtn"),
   roomQrWrap: document.getElementById("roomQrWrap"),
   roomQrImage: document.getElementById("roomQrImage"),
+  startBtn: document.getElementById("startBtn"),
   roomCodeText: document.getElementById("roomCodeText"),
   roomStatusText: document.getElementById("roomStatusText"),
   matchStatusText: document.getElementById("matchStatusText"),
@@ -930,6 +931,9 @@ const AudioFX = {
     this.gain = this.ctx.createGain();
     this.gain.gain.value = 0.14;
     this.gain.connect(this.ctx.destination);
+    if (this.ctx.state === "suspended") {
+      this.ctx.resume().catch(() => {});
+    }
   },
   tone(freq, duration = 0.1, type = "sine", amp = 0.1) {
     if (state.muted) return;
@@ -961,6 +965,9 @@ const AudioFX = {
       return;
     }
     this.init();
+    if (this.ctx && this.ctx.state === "suspended") {
+      this.ctx.resume().catch(() => {});
+    }
     const osc = this.ctx.createOscillator();
     const filter = this.ctx.createBiquadFilter();
     const g = this.ctx.createGain();
@@ -990,6 +997,8 @@ const AudioFX = {
     this.musicOsc = null;
   }
 };
+
+let inviteQrInstance = null;
 
 function t(key) {
   return I18N[state.lang][key] || key;
@@ -1074,9 +1083,6 @@ function updateProfilePanel() {
   const p = state.profile;
   const fullName = `${p.firstName || "Player"} ${p.lastName || ""}`.trim();
   const accuracy = p.totalAnswers ? Math.round((p.totalCorrect / p.totalAnswers) * 100) : 0;
-  const avatarFile = (p.avatarSeed || "avatar-1.png").trim();
-  const allowed = new Set(["default.svg", ...PATHS.assets.localAvatarFiles]);
-  const safeAvatar = allowed.has(avatarFile) ? avatarFile : "default.svg";
   dom.profileName.textContent = fullName;
   dom.profileLevel.textContent = String(p.level);
   dom.profileXp.textContent = String(p.totalXP);
@@ -1084,11 +1090,98 @@ function updateProfilePanel() {
   dom.profileMistakes.textContent = String(p.mistakes);
   dom.profileAccuracy.textContent = `${accuracy}%`;
   dom.profileFavoriteMode.textContent = p.favoriteMode;
-  dom.avatarImage.src = `${PATHS.assets.localAvatarPrefix}${safeAvatar}`;
+  dom.avatarImage.src = getAvatarSrc(p.avatarSeed);
   dom.avatarImage.onerror = () => {
     dom.avatarImage.onerror = null;
     dom.avatarImage.src = PATHS.assets.defaultAvatar;
   };
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, ch => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[ch]));
+}
+
+function renderPlayerAvatar(seed, name, size = 40) {
+  const safeName = escapeHtml(name || "Player");
+  return `
+    <span class="player-avatar-wrap" style="width:${size}px;height:${size}px">
+      <img class="player-avatar" src="${getAvatarSrc(seed)}" alt="${safeName}" width="${size}" height="${size}" loading="lazy">
+    </span>
+  `;
+}
+
+function normalizeOnlinePlayer(id, data = {}) {
+  return {
+    id,
+    uid: data.uid || "",
+    name: data.name || data.fullName || id || "Player",
+    avatarSeed: data.avatarSeed || "avatar-1.png",
+    status: data.status || "waiting",
+    ready: Boolean(data.ready),
+    score: safeNumber(data.score, 0),
+    xp: safeNumber(data.xp, 0),
+    combo: Math.max(1, safeNumber(data.combo, 1)),
+    mistakes: safeNumber(data.mistakes, 0),
+    answers: safeNumber(data.answers, 0),
+    correct: safeNumber(data.correct, 0),
+    hp: safeNumber(data.hp, 100),
+    shield: safeNumber(data.shield, 0),
+    gold: safeNumber(data.gold, 0),
+    steps: safeNumber(data.steps, 0),
+    coins: safeNumber(data.coins, 100),
+    heartbeatAt: safeNumber(data.heartbeatAt, 0),
+    joinedAt: safeNumber(data.joinedAt, 0),
+    sessionToken: data.sessionToken || ""
+  };
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, ch => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[ch]));
+}
+
+function roomPlayerAvatar(seed, name, size = 40) {
+  const safeName = escapeHtml(name || "Player");
+  return `
+    <span class="player-avatar-wrap" style="width:${size}px;height:${size}px">
+      <img class="player-avatar" src="${getAvatarSrc(seed)}" alt="${safeName}" width="${size}" height="${size}" loading="lazy">
+    </span>
+  `;
+}
+
+function getAvatarSrc(seed) {
+  const avatarFile = (seed || "avatar-1.png").trim();
+  const allowed = new Set(["default.svg", ...PATHS.assets.localAvatarFiles]);
+  const safeAvatar = allowed.has(avatarFile) ? avatarFile : "default.svg";
+  return safeAvatar === "default.svg"
+    ? PATHS.assets.defaultAvatar
+    : `${PATHS.assets.localAvatarPrefix}${safeAvatar}`;
+}
+
+function createAvatarElement(seed, alt, size = 36) {
+  const img = document.createElement("img");
+  img.src = getAvatarSrc(seed);
+  img.alt = alt || "avatar";
+  img.width = size;
+  img.height = size;
+  img.loading = "lazy";
+  img.className = "player-avatar";
+  img.onerror = () => {
+    img.onerror = null;
+    img.src = PATHS.assets.defaultAvatar;
+  };
+  return img;
 }
 
 function unlockAchievement(title, description) {
@@ -1403,12 +1496,27 @@ function updateInviteUI() {
   if (!dom.roomQrWrap || !dom.roomQrImage) return;
   if (!state.online.connected || !state.online.roomCode) {
     dom.roomQrWrap.classList.remove("show");
-    dom.roomQrImage.removeAttribute("src");
+    dom.roomQrImage.innerHTML = "";
+    inviteQrInstance = null;
     return;
   }
   const invite = getInviteUrl(state.online.roomCode);
-  const qr = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(invite)}`;
-  dom.roomQrImage.src = qr;
+  dom.roomQrImage.innerHTML = "";
+  if (window.QRCode) {
+    inviteQrInstance = new QRCode(dom.roomQrImage, {
+      text: invite,
+      width: 128,
+      height: 128,
+      colorDark: "#101320",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  } else {
+    const fallback = document.createElement("small");
+    fallback.textContent = state.online.roomCode;
+    fallback.style.color = "#0f172a";
+    dom.roomQrImage.appendChild(fallback);
+  }
   dom.roomQrWrap.classList.add("show");
 }
 
@@ -1482,7 +1590,9 @@ function updateRoomUI() {
     dom.onlineGameMode.value = state.online.gameMode || "simple";
     dom.onlineGameMode.disabled = !state.online.isHost || !inLobby;
   }
-  dom.startBtn.disabled = state.mode === "online" && (!state.online.connected || !state.online.isHost || !hasMinPlayers || !inLobby);
+  if (dom.startBtn) {
+    dom.startBtn.disabled = state.mode === "online" && (!state.online.connected || !state.online.isHost || !hasMinPlayers || !inLobby);
+  }
   updateInviteUI();
   updateModeStatusBar();
   renderWaitingPlayers();
@@ -2103,16 +2213,17 @@ function updateOnlineBoards() {
 
 function sanitizeIncomingOnlineState(id, payload) {
   if (!validateRemoteOnlineState(id, payload)) return;
-  state.online.liveScores[id] = {
-    from: id,
-    score: Number(payload.score || 0),
-    xp: Number(payload.xp || 0),
-    combo: Number(payload.combo || 1),
-    mistakes: Number(payload.mistakes || 0),
-    answers: Number(payload.answers || 0),
-    correct: Number(payload.correct || 0)
-  };
-}
+    state.online.liveScores[id] = {
+      from: id,
+      score: Number(payload.score || 0),
+      xp: Number(payload.xp || 0),
+      combo: Number(payload.combo || 1),
+      mistakes: Number(payload.mistakes || 0),
+      answers: Number(payload.answers || 0),
+      correct: Number(payload.correct || 0),
+      avatarSeed: payload.avatarSeed || "avatar-1.png"
+    };
+  }
 
 function publishOnlineState() {
   if (!state.online.connected) return;
@@ -2450,21 +2561,12 @@ async function initOnlineBackend() {
 
 async function createRoom() {
   if (state.online.inFlightJoin) return;
-  setOnlineLoading(true, t("onlineCreating"));
-  const ok = await initOnlineBackend();
-  if (!ok) {
-    state.online.inFlightJoin = false;
-    setOnlineLoading(false);
-    return;
-  }
   const code = normalizeRoomCode(dom.roomInput.value) || generateRoomCode();
   dom.roomInput.value = code;
   await joinRoom(code, true);
-  state.online.inFlightJoin = false;
-  setOnlineLoading(false);
 }
 
-async function joinRoom(codeInput = "", createIfMissing = false) {
+async function legacyJoinRoom(codeInput = "", createIfMissing = false) {
   if (state.online.inFlightJoin) return;
   state.online.inFlightJoin = true;
   setOnlineLoading(true, createIfMissing ? t("onlineCreating") : t("onlineJoining"));
@@ -2545,6 +2647,7 @@ async function joinRoom(codeInput = "", createIfMissing = false) {
     id: state.online.id,
     uid: state.online.uid,
     name: playerName,
+    avatarSeed: state.profile.avatarSeed || "avatar-1.png",
     status: "waiting",
     ready: false,
     score: 0,
@@ -2562,6 +2665,7 @@ async function joinRoom(codeInput = "", createIfMissing = false) {
   state.online.liveScores[state.online.id] = {
     from: state.online.id,
     name: playerName,
+    avatarSeed: state.profile.avatarSeed || "avatar-1.png",
     score: 0,
     xp: 0,
     combo: 1,
@@ -2588,6 +2692,135 @@ async function joinRoom(codeInput = "", createIfMissing = false) {
   updateRoomUI();
   state.online.inFlightJoin = false;
   setOnlineLoading(false);
+}
+
+async function legacyJoinRoom(codeInput = "", createIfMissing = false) {
+  if (state.online.inFlightJoin) return;
+  state.online.inFlightJoin = true;
+  setOnlineLoading(true, createIfMissing ? t("onlineCreating") : t("onlineJoining"));
+  try {
+    const ok = await initOnlineBackend();
+    if (!ok) return;
+    const roomCode = normalizeRoomCode(codeInput || dom.roomInput.value);
+    if (!roomCode) {
+      showPopup(t("roomNeedCode"));
+      return;
+    }
+    if (state.online.connected) await leaveRoom(true);
+
+    const sessionToken = `${state.online.uid}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
+    state.online.sessionToken = sessionToken;
+    state.online.globalSessionRef = state.online.db.ref(`${ONLINE_ROOT}/sessions/${state.online.uid}`);
+    const prevSessionSnap = await state.online.globalSessionRef.once("value");
+    if (prevSessionSnap.exists()) {
+      const prev = prevSessionSnap.val() || {};
+      if (prev.roomCode && prev.roomCode !== roomCode) showPopup(t("sessionReplaced"));
+    }
+    await state.online.globalSessionRef.set({
+      roomCode,
+      playerId: state.online.id,
+      sessionToken,
+      updatedAt: firebase.database.ServerValue.TIMESTAMP
+    });
+    state.online.globalSessionRef.onDisconnect().remove();
+
+    const roomRef = state.online.db.ref(`${ONLINE_ROOT}/rooms/${roomCode}`);
+    if (!createIfMissing) {
+      const existsSnap = await roomRef.child("meta/createdAt").once("value");
+      if (!existsSnap.exists()) {
+        showPopup(t("roomNotFound"));
+        return;
+      }
+    } else {
+      await roomRef.child("meta").update({
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+        createdBy: state.online.id,
+        createdByUid: state.online.uid,
+        version: 1
+      });
+      await roomRef.child("state").update({
+        status: "lobby",
+        hostId: state.online.id,
+        mode: state.online.gameMode || "simple",
+        updatedAt: firebase.database.ServerValue.TIMESTAMP
+      });
+    }
+
+    const metaSnap = await roomRef.child("meta").once("value");
+    const meta = metaSnap.val() || {};
+    state.online.ownerUid = meta.createdByUid || state.online.uid;
+
+    state.online.roomCode = roomCode;
+    state.online.room = roomCode;
+    state.online.roomRef = roomRef;
+    state.online.playersRef = roomRef.child("players");
+    state.online.stateRef = roomRef.child("state");
+    state.online.eventsRef = roomRef.child("events");
+    state.online.myPlayerRef = state.online.playersRef.child(state.online.id);
+    state.online.connected = true;
+    state.online.connectedSince = Date.now();
+    state.online.ready = false;
+    state.online.matchStatus = "lobby";
+    state.online.peers = {};
+    state.online.liveScores = {};
+    state.online.finishes = {};
+    state.online.startPlan = null;
+    state.online.remoteAudit = {};
+    state.online.modeState = {};
+    stopModeTimers();
+
+    const playerName = state.players[0].fullName || `${state.profile.firstName || "Player"} ${state.profile.lastName || ""}`.trim() || "Player";
+    await state.online.myPlayerRef.set({
+      id: state.online.id,
+      uid: state.online.uid,
+      name: playerName,
+      status: "waiting",
+      ready: false,
+      score: 0,
+      xp: 0,
+      combo: 1,
+      mistakes: 0,
+      answers: 0,
+      correct: 0,
+      answerMsTotal: 0,
+      updatedAt: firebase.database.ServerValue.TIMESTAMP,
+      joinedAt: firebase.database.ServerValue.TIMESTAMP,
+      sessionToken,
+      heartbeatAt: firebase.database.ServerValue.TIMESTAMP
+    });
+    state.online.liveScores[state.online.id] = {
+      from: state.online.id,
+      name: playerName,
+      score: 0,
+      xp: 0,
+      combo: 1,
+      mistakes: 0,
+      answers: 0,
+      correct: 0
+    };
+    state.online.myPlayerRef.onDisconnect().remove();
+    state.online.mySessionRef = roomRef.child(`sessions/${state.online.uid}`);
+    await state.online.mySessionRef.set({
+      playerId: state.online.id,
+      roomCode,
+      sessionToken,
+      updatedAt: firebase.database.ServerValue.TIMESTAMP
+    });
+    state.online.mySessionRef.onDisconnect().remove();
+
+    subscribeOnlineRoom();
+    showPopup(t("roomConnected"));
+    AudioFX.playSample("matchFound", 0.4);
+    showBattlePopup(`вљЎ ${t("matchFound")}`);
+    startOnlineHeartbeats();
+    startAfkWatcher();
+    updateRoomUI();
+  } catch (_err) {
+    showPopup(createIfMissing ? t("roomCreateFail") : t("roomJoinFail"));
+  } finally {
+    state.online.inFlightJoin = false;
+    setOnlineLoading(false);
+  }
 }
 
 async function leaveRoom(silent = false) {
@@ -2694,6 +2927,8 @@ function renderWaitingPlayers() {
 function updateRoomStateFromSnapshot(data) {
   if (!data) return;
   const nextStatus = data.status || "lobby";
+  if (data.mode) state.online.gameMode = data.mode;
+  if (data.hostId) state.online.hostId = data.hostId;
   state.online.matchStatus = nextStatus;
   if (nextStatus === "starting" || nextStatus === "running") {
     const signature = `${data.startAt || 0}:${data.seed || ""}`;
@@ -2775,6 +3010,14 @@ function stopAfkWatcher() {
     clearInterval(state.online.afkInterval);
     state.online.afkInterval = null;
   }
+}
+
+function stopModeTimers() {
+  if (state.online.marketInterval) {
+    clearInterval(state.online.marketInterval);
+    state.online.marketInterval = null;
+  }
+  state.online.marketCooldownUntil = 0;
 }
 
 function bindConnectivityWatchers() {
@@ -2892,11 +3135,12 @@ async function setReadyOnline() {
   }
   state.online.ready = !state.online.ready;
   const nextStatus = state.online.ready ? "ready" : "waiting";
-  await state.online.myPlayerRef.update({
-    ready: state.online.ready,
-    status: nextStatus,
-    updatedAt: firebase.database.ServerValue.TIMESTAMP
-  });
+    await state.online.myPlayerRef.update({
+      ready: state.online.ready,
+      status: nextStatus,
+      avatarSeed: state.profile.avatarSeed || "avatar-1.png",
+      updatedAt: firebase.database.ServerValue.TIMESTAMP
+    });
   showPopup(state.online.ready ? t("roomReadyOn") : t("roomReadyOff"));
   updateRoomUI();
 }
@@ -3114,6 +3358,19 @@ function initTilt() {
 }
 
 function bindEvents() {
+  const unlockAudio = () => {
+    AudioFX.init();
+    if (!state.muted && !dom.introScreen.classList.contains("active")) {
+      AudioFX.startMusic();
+    }
+    window.removeEventListener("pointerdown", unlockAudio);
+    window.removeEventListener("touchstart", unlockAudio);
+    window.removeEventListener("keydown", unlockAudio);
+  };
+  window.addEventListener("pointerdown", unlockAudio, { once: true });
+  window.addEventListener("touchstart", unlockAudio, { once: true });
+  window.addEventListener("keydown", unlockAudio, { once: true });
+
   dom.modeButtons.forEach(btn => {
     btn.addEventListener("click", () => setMode(btn.dataset.mode));
     btn.addEventListener("mouseenter", () => {
@@ -3144,6 +3401,41 @@ function bindEvents() {
   dom.joinRoomBtn.addEventListener("click", () => joinRoom().catch(() => showPopup(t("roomJoinFail"))));
   dom.readyBtn.addEventListener("click", () => setReadyOnline().catch(() => showPopup(t("roomJoinFail"))));
   dom.leaveRoomBtn.addEventListener("click", () => leaveRoom().catch(() => showPopup(t("roomJoinFail"))));
+  if (dom.onlineGameMode) {
+    dom.onlineGameMode.addEventListener("change", async e => {
+      const mode = e.target.value || "simple";
+      state.online.gameMode = mode;
+      if (state.online.connected && state.online.isHost && state.online.matchStatus === "lobby" && state.online.stateRef) {
+        try {
+          await state.online.stateRef.update({
+            mode,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP
+          });
+        } catch (_err) {
+          // ignore
+        }
+      }
+      updateRoomUI();
+    });
+  }
+  if (dom.copyInviteBtn) {
+    dom.copyInviteBtn.addEventListener("click", async () => {
+      if (!state.online.roomCode) return;
+      const link = getInviteUrl(state.online.roomCode);
+      try {
+        await navigator.clipboard.writeText(link);
+        showPopup("Invite copied");
+      } catch (_err) {
+        showPopup(link);
+      }
+    });
+  }
+  if (dom.openInviteBtn) {
+    dom.openInviteBtn.addEventListener("click", () => {
+      if (!state.online.roomCode) return;
+      window.open(getInviteUrl(state.online.roomCode), "_blank", "noopener");
+    });
+  }
   dom.avatarRandomBtn.addEventListener("click", () => {
     const idx = Math.floor(Math.random() * PATHS.assets.localAvatarFiles.length);
     state.profile.avatarSeed = PATHS.assets.localAvatarFiles[idx] || "avatar-1.png";
@@ -3185,6 +3477,512 @@ function init() {
   if (!FIREBASE_CONFIG.apiKey) {
     console.warn("Set FIREBASE_CONFIG in script.js or window.PY_ARENA_FIREBASE_CONFIG before script load.");
   }
+
+  const roomFromQuery = normalizeRoomCode(new URLSearchParams(window.location.search).get("room") || "");
+  if (roomFromQuery) {
+    dom.roomInput.value = roomFromQuery;
+    setMode("online");
+  }
 }
 
 init();
+
+async function joinRoom(codeInput = "", createIfMissing = false) {
+  if (state.online.inFlightJoin) return;
+  state.online.inFlightJoin = true;
+  setOnlineLoading(true, createIfMissing ? t("onlineCreating") : t("onlineJoining"));
+  try {
+    const ok = await initOnlineBackend();
+    if (!ok) return;
+
+    const roomCode = normalizeRoomCode(codeInput || dom.roomInput.value);
+    if (!roomCode) {
+      showPopup(t("roomNeedCode"));
+      return;
+    }
+
+    if (state.online.connected) await leaveRoom(true);
+
+    const sessionToken = `${state.online.uid}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
+    state.online.sessionToken = sessionToken;
+    state.online.globalSessionRef = state.online.db.ref(`${ONLINE_ROOT}/sessions/${state.online.uid}`);
+    const prevSessionSnap = await state.online.globalSessionRef.once("value");
+    if (prevSessionSnap.exists()) {
+      const prev = prevSessionSnap.val() || {};
+      if (prev.roomCode && prev.roomCode !== roomCode) showPopup(t("sessionReplaced"));
+    }
+    await state.online.globalSessionRef.set({
+      roomCode,
+      playerId: state.online.id,
+      sessionToken,
+      updatedAt: firebase.database.ServerValue.TIMESTAMP
+    });
+    state.online.globalSessionRef.onDisconnect().remove();
+
+    const roomRef = state.online.db.ref(`${ONLINE_ROOT}/rooms/${roomCode}`);
+    if (!createIfMissing) {
+      const existsSnap = await roomRef.child("meta/createdAt").once("value");
+      if (!existsSnap.exists()) {
+        showPopup(t("roomNotFound"));
+        return;
+      }
+    } else {
+      await roomRef.child("meta").update({
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+        createdBy: state.online.id,
+        createdByUid: state.online.uid,
+        version: 1
+      });
+      await roomRef.child("state").update({
+        status: "lobby",
+        hostId: state.online.id,
+        ownerUid: state.online.uid,
+        mode: state.online.gameMode || "simple",
+        updatedAt: firebase.database.ServerValue.TIMESTAMP
+      });
+    }
+
+    const metaSnap = await roomRef.child("meta").once("value");
+    const meta = metaSnap.val() || {};
+    state.online.ownerUid = meta.createdByUid || state.online.uid;
+
+    state.online.roomCode = roomCode;
+    state.online.room = roomCode;
+    state.online.roomRef = roomRef;
+    state.online.playersRef = roomRef.child("players");
+    state.online.stateRef = roomRef.child("state");
+    state.online.eventsRef = roomRef.child("events");
+    state.online.myPlayerRef = state.online.playersRef.child(state.online.id);
+    state.online.connected = true;
+    state.online.connectedSince = Date.now();
+    state.online.ready = false;
+    state.online.matchStatus = "lobby";
+    state.online.peers = {};
+    state.online.liveScores = {};
+    state.online.finishes = {};
+    state.online.startPlan = null;
+    state.online.remoteAudit = {};
+    state.online.modeState = {};
+    stopModeTimers();
+
+    const playerName = state.players[0].fullName || `${state.profile.firstName || "Player"} ${state.profile.lastName || ""}`.trim() || "Player";
+    const avatarSeed = state.profile.avatarSeed || "avatar-1.png";
+    await state.online.myPlayerRef.set({
+      id: state.online.id,
+      uid: state.online.uid,
+      name: playerName,
+      avatarSeed,
+      status: "waiting",
+      ready: false,
+      score: 0,
+      xp: 0,
+      combo: 1,
+      mistakes: 0,
+      answers: 0,
+      correct: 0,
+      answerMsTotal: 0,
+      updatedAt: firebase.database.ServerValue.TIMESTAMP,
+      joinedAt: firebase.database.ServerValue.TIMESTAMP,
+      sessionToken,
+      heartbeatAt: firebase.database.ServerValue.TIMESTAMP
+    });
+    state.online.liveScores[state.online.id] = normalizeOnlinePlayer(state.online.id, {
+      uid: state.online.uid,
+      name: playerName,
+      avatarSeed,
+      score: 0,
+      xp: 0,
+      combo: 1,
+      mistakes: 0,
+      answers: 0,
+      correct: 0,
+      status: "waiting"
+    });
+    state.online.myPlayerRef.onDisconnect().remove();
+    state.online.mySessionRef = roomRef.child(`sessions/${state.online.uid}`);
+    await state.online.mySessionRef.set({
+      playerId: state.online.id,
+      roomCode,
+      sessionToken,
+      updatedAt: firebase.database.ServerValue.TIMESTAMP
+    });
+    state.online.mySessionRef.onDisconnect().remove();
+
+    subscribeOnlineRoom();
+    showPopup(t("roomConnected"));
+    AudioFX.playSample("matchFound", 0.4);
+    showBattlePopup(`⚡ ${t("matchFound")}`);
+    startOnlineHeartbeats();
+    startAfkWatcher();
+    updateRoomUI();
+  } catch (_err) {
+    showPopup(createIfMissing ? t("roomCreateFail") : t("roomJoinFail"));
+  } finally {
+    state.online.inFlightJoin = false;
+    setOnlineLoading(false);
+  }
+}
+
+function recalcHost() {
+  state.online.hostId = state.online.ownerUid || state.online.hostId || state.online.id;
+  state.online.isHost = state.online.hostId === state.online.id || state.online.ownerUid === state.online.uid;
+}
+
+function renderWaitingPlayers() {
+  const list = [normalizeOnlinePlayer(state.online.id, {
+    ...(state.online.liveScores[state.online.id] || {}),
+    name: state.players[0].fullName || `${state.profile.firstName || "Player"} ${state.profile.lastName || ""}`.trim() || "Player",
+    avatarSeed: state.profile.avatarSeed || "avatar-1.png",
+    status: state.online.matchStatus === "running" ? "answering" : (state.online.ready ? "ready" : "waiting"),
+    uid: state.online.uid
+  })].concat(Object.entries(state.online.peers).map(([id, data]) => normalizeOnlinePlayer(id, { ...data, ...(state.online.liveScores[id] || {}) })));
+
+  dom.waitingPlayersList.innerHTML = "";
+  if (!list.length || !state.online.connected) return;
+  list.sort((a, b) => (a.joinedAt || 0) - (b.joinedAt || 0));
+  list.forEach(player => {
+    const li = document.createElement("li");
+    const status = player.status === "ready" ? t("playerReady")
+      : player.status === "answering" ? t("playerAnswering")
+      : player.status === "finished" ? t("playerFinished")
+      : t("playerWaiting");
+    li.className = "player-row";
+    li.innerHTML = `
+      <div class="player-row-left">
+        ${renderPlayerAvatar(player.avatarSeed, player.name, 34)}
+        <div>
+          <strong>${escapeHtml(player.name)}</strong>
+          <p>${escapeHtml(status)}</p>
+        </div>
+      </div>
+      <div class="player-row-right">
+        <span>${player.ready ? "✓" : "•"}</span>
+        <small>${escapeHtml(player.uid || player.id)}</small>
+      </div>
+    `;
+    dom.waitingPlayersList.appendChild(li);
+  });
+}
+
+function updateRoomStateFromSnapshot(data) {
+  if (!data) return;
+  const nextStatus = data.status || "lobby";
+  if (data.mode) state.online.gameMode = data.mode;
+  if (data.hostId) state.online.hostId = data.hostId;
+  if (data.ownerUid) state.online.ownerUid = data.ownerUid;
+  state.online.matchStatus = nextStatus;
+  if (nextStatus === "starting" || nextStatus === "running") {
+    const signature = `${data.startAt || 0}:${data.seed || ""}`;
+    const already = state.online.startPlan && state.online.startPlan.signature === signature;
+    if (!already && Array.isArray(data.plan) && data.plan.length >= 20) {
+      state.online.startPlan = { signature, plan: data.plan };
+      startOnlineMatch(data.plan, data.startAt || Date.now());
+      if (state.online.myPlayerRef) {
+        state.online.myPlayerRef.child("status").set("answering");
+      }
+    }
+  }
+  updateRoomUI();
+}
+
+function sanitizeIncomingOnlineState(id, payload) {
+  if (!validateRemoteOnlineState(id, payload)) return;
+  state.online.liveScores[id] = normalizeOnlinePlayer(id, payload);
+}
+
+function publishOnlineState() {
+  if (!state.online.connected) return;
+  const now = Date.now();
+  if (now - state.online.lastPublishAt < ONLINE_LIMITS.statePublishMs) return;
+  state.online.lastPublishAt = now;
+  const self = state.players[0];
+  const elapsedMs = Math.max(0, Date.now() - (state.online.antiCheat.questionStartAt || Date.now()));
+  const minHumanMs = ONLINE_LIMITS.minHumanAnswerMs;
+  if (elapsedMs < minHumanMs) {
+    showPopup(t("antiCheatFast"));
+    return;
+  }
+  const fullName = self.fullName || `${state.profile.firstName || "Player"} ${state.profile.lastName || ""}`.trim() || "Player";
+  const avatarSeed = state.profile.avatarSeed || "avatar-1.png";
+  const payload = {
+    type: "state",
+    from: state.online.id,
+    uid: state.online.uid,
+    name: fullName,
+    avatarSeed,
+    score: self.score,
+    xp: self.xp,
+    combo: state.comboMult,
+    mistakes: self.mistakes,
+    answers: self.answers,
+    correct: self.correct,
+    status: state.online.matchStatus === "running" ? "answering" : (state.online.ready ? "ready" : "waiting"),
+    elapsedMs
+  };
+  state.online.liveScores[state.online.id] = normalizeOnlinePlayer(state.online.id, payload);
+  if (state.online.myPlayerRef) {
+    state.online.myPlayerRef.update({
+      uid: state.online.uid,
+      name: fullName,
+      avatarSeed,
+      score: self.score,
+      xp: self.xp,
+      combo: state.comboMult,
+      mistakes: self.mistakes,
+      answers: self.answers,
+      correct: self.correct,
+      answerMsTotal: (state.answerTimes.reduce((a, b) => a + b, 0) * 1000) | 0,
+      status: payload.status,
+      updatedAt: firebase.database.ServerValue.TIMESTAMP
+    });
+  }
+  sendOnline(payload);
+  updateOnlineBoards();
+}
+
+async function setReadyOnline() {
+  if (!state.online.connected || !state.online.myPlayerRef) return;
+  if (state.online.matchStatus !== "lobby") return;
+  if (Object.keys(state.online.peers).length + 1 < 2) {
+    showPopup(t("waitingPlayers"));
+    return;
+  }
+  state.online.ready = !state.online.ready;
+  const nextStatus = state.online.ready ? "ready" : "waiting";
+  await state.online.myPlayerRef.update({
+    ready: state.online.ready,
+    status: nextStatus,
+    avatarSeed: state.profile.avatarSeed || "avatar-1.png",
+    updatedAt: firebase.database.ServerValue.TIMESTAMP
+  });
+  showPopup(state.online.ready ? t("roomReadyOn") : t("roomReadyOff"));
+  updateRoomUI();
+}
+
+function joinRoomLegacyBridge(...args) {
+  return joinRoom(...args);
+}
+
+const legacyJoinRoomBridge = joinRoomLegacyBridge;
+
+function renderLiveOnlineLeaderboard() {
+  if (!dom.onlineLiveLeaderboard) return;
+  dom.onlineLiveLeaderboard.innerHTML = "";
+  const selfName = state.players[0].fullName || `${state.profile.firstName || "Player"} ${state.profile.lastName || ""}`.trim() || "Player";
+  const selfLive = state.online.liveScores[state.online.id] || {};
+  const rows = [
+    normalizeOnlinePlayer(state.online.id, {
+      ...selfLive,
+      name: selfName,
+      avatarSeed: state.profile.avatarSeed || "avatar-1.png",
+      score: safeNumber(selfLive.score, state.players[0].score),
+      xp: safeNumber(selfLive.xp, state.players[0].xp),
+      combo: safeNumber(selfLive.combo, state.comboMult),
+      answers: safeNumber(selfLive.answers, state.players[0].answers),
+      correct: safeNumber(selfLive.correct, state.players[0].correct),
+      mistakes: safeNumber(selfLive.mistakes, state.players[0].mistakes),
+      uid: state.online.uid
+    }),
+    ...Object.entries(state.online.peers).map(([id, peer]) => normalizeOnlinePlayer(id, { ...peer, ...(state.online.liveScores[id] || {}) }))
+  ].sort((a, b) => (b.score || 0) - (a.score || 0));
+
+  rows.forEach((row, idx) => {
+    const li = document.createElement("li");
+    const acc = row.answers ? Math.round((row.correct / row.answers) * 100) : 0;
+    const badge = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : "•";
+    li.className = "player-row";
+    li.innerHTML = `
+      <div class="player-row-left">
+        ${renderPlayerAvatar(row.avatarSeed, row.name, 38)}
+        <div>
+          <strong>${badge} ${escapeHtml(row.name)}</strong>
+          <p>${escapeHtml(row.status || "online")}</p>
+        </div>
+      </div>
+      <div class="player-row-right">
+        <span>${row.score}</span>
+        <small>XP ${row.xp} · Acc ${acc}% · x${row.combo} · Err ${row.mistakes}</small>
+      </div>
+    `;
+    dom.onlineLiveLeaderboard.appendChild(li);
+  });
+}
+
+function renderOnlineCards() {
+  if (!dom.onlineCards) return;
+  const selfName = state.players[0].fullName || `${state.profile.firstName || "Player"} ${state.profile.lastName || ""}`.trim() || "Player";
+  const selfLive = state.online.liveScores[state.online.id] || {};
+  const rows = [
+    normalizeOnlinePlayer(state.online.id, {
+      ...selfLive,
+      name: selfName,
+      avatarSeed: state.profile.avatarSeed || "avatar-1.png",
+      score: safeNumber(selfLive.score, state.players[0].score),
+      combo: safeNumber(selfLive.combo, state.comboMult),
+      status: state.online.matchStatus === "running" ? "answering" : (state.online.ready ? "ready" : "waiting"),
+      uid: state.online.uid
+    }),
+    ...Object.entries(state.online.peers).map(([id, peer]) => normalizeOnlinePlayer(id, { ...peer, ...(state.online.liveScores[id] || {}) }))
+  ].sort((a, b) => (b.score || 0) - (a.score || 0));
+
+  dom.onlineCards.innerHTML = rows.map((row, idx) => `
+    <article class="player-card ${row.id === state.online.id ? "me" : ""}">
+      <div class="player-row-left">
+        ${renderPlayerAvatar(row.avatarSeed, row.name, 44)}
+        <div>
+          <strong>${idx === 0 ? "★ " : ""}${escapeHtml(row.name)}</strong>
+          <p>${escapeHtml(row.status)}</p>
+        </div>
+      </div>
+      <div class="player-card-meta">
+        <span>${row.score}</span>
+        <small>x${row.combo}</small>
+      </div>
+    </article>
+  `).join("");
+}
+
+function recalcHost() {
+  const ownerUid = state.online.ownerUid || "";
+  const all = {
+    [state.online.id]: { uid: state.online.uid, ...(state.online.liveScores[state.online.id] || {}) },
+    ...Object.fromEntries(Object.entries(state.online.peers).map(([id, peer]) => [id, { uid: peer.uid || (state.online.liveScores[id] || {}).uid || "", ...peer }]))
+  };
+  const ownerEntry = Object.entries(all).find(([, player]) => player && player.uid && player.uid === ownerUid);
+  state.online.hostId = ownerEntry ? ownerEntry[0] : (state.online.hostId || state.online.id);
+  state.online.isHost = Boolean(ownerUid) ? state.online.uid === ownerUid : state.online.hostId === state.online.id;
+}
+
+function renderWaitingPlayers() {
+  if (!dom.waitingPlayersList) return;
+  const list = [
+    normalizeOnlinePlayer(state.online.id, {
+      ...(state.online.liveScores[state.online.id] || {}),
+      name: state.players[0].fullName || `${state.profile.firstName || "Player"} ${state.profile.lastName || ""}`.trim() || "Player",
+      avatarSeed: state.profile.avatarSeed || "avatar-1.png",
+      status: state.online.matchStatus === "running" ? "answering" : (state.online.ready ? "ready" : "waiting"),
+      uid: state.online.uid
+    }),
+    ...Object.entries(state.online.peers).map(([id, data]) => normalizeOnlinePlayer(id, { ...data, ...(state.online.liveScores[id] || {}) }))
+  ];
+  dom.waitingPlayersList.innerHTML = "";
+  if (!list.length || !state.online.connected) return;
+  list.sort((a, b) => (a.joinedAt || 0) - (b.joinedAt || 0));
+  list.forEach(player => {
+    const li = document.createElement("li");
+    const status = player.status === "ready" ? t("playerReady")
+      : player.status === "answering" ? t("playerAnswering")
+      : player.status === "finished" ? t("playerFinished")
+      : t("playerWaiting");
+    li.className = "player-row";
+    li.innerHTML = `
+      <div class="player-row-left">
+        ${renderPlayerAvatar(player.avatarSeed, player.name, 34)}
+        <div>
+          <strong>${escapeHtml(player.name)}</strong>
+          <p>${escapeHtml(status)}</p>
+        </div>
+      </div>
+      <div class="player-row-right">
+        <span>${player.ready ? "✓" : "•"}</span>
+        <small>${escapeHtml(player.uid || player.id)}</small>
+      </div>
+    `;
+    dom.waitingPlayersList.appendChild(li);
+  });
+}
+
+function updateRoomStateFromSnapshot(data) {
+  if (!data) return;
+  const nextStatus = data.status || "lobby";
+  if (data.mode) state.online.gameMode = data.mode;
+  if (data.hostId) state.online.hostId = data.hostId;
+  if (data.ownerUid) state.online.ownerUid = data.ownerUid;
+  state.online.matchStatus = nextStatus;
+  recalcHost();
+  if (nextStatus === "starting" || nextStatus === "running") {
+    const signature = `${data.startAt || 0}:${data.seed || ""}`;
+    const already = state.online.startPlan && state.online.startPlan.signature === signature;
+    if (!already && Array.isArray(data.plan) && data.plan.length >= 20) {
+      state.online.startPlan = { signature, plan: data.plan };
+      startOnlineMatch(data.plan, data.startAt || Date.now());
+      if (state.online.myPlayerRef) {
+        state.online.myPlayerRef.child("status").set("answering");
+      }
+    }
+  }
+  updateRoomUI();
+}
+
+function sanitizeIncomingOnlineState(id, payload) {
+  if (!validateRemoteOnlineState(id, payload)) return;
+  state.online.liveScores[id] = normalizeOnlinePlayer(id, payload);
+}
+
+function publishOnlineState() {
+  if (!state.online.connected) return;
+  const now = Date.now();
+  if (now - state.online.lastPublishAt < ONLINE_LIMITS.statePublishMs) return;
+  state.online.lastPublishAt = now;
+  const self = state.players[0];
+  const elapsedMs = Math.max(0, Date.now() - (state.online.antiCheat.questionStartAt || Date.now()));
+  if (elapsedMs < ONLINE_LIMITS.minHumanAnswerMs) {
+    showPopup(t("antiCheatFast"));
+    return;
+  }
+  const fullName = self.fullName || `${state.profile.firstName || "Player"} ${state.profile.lastName || ""}`.trim() || "Player";
+  const avatarSeed = state.profile.avatarSeed || "avatar-1.png";
+  const payload = {
+    type: "state",
+    from: state.online.id,
+    uid: state.online.uid,
+    name: fullName,
+    avatarSeed,
+    score: self.score,
+    xp: self.xp,
+    combo: state.comboMult,
+    mistakes: self.mistakes,
+    answers: self.answers,
+    correct: self.correct,
+    status: state.online.matchStatus === "running" ? "answering" : (state.online.ready ? "ready" : "waiting"),
+    elapsedMs
+  };
+  state.online.liveScores[state.online.id] = normalizeOnlinePlayer(state.online.id, payload);
+  if (state.online.myPlayerRef) {
+    state.online.myPlayerRef.update({
+      uid: state.online.uid,
+      name: fullName,
+      avatarSeed,
+      score: self.score,
+      xp: self.xp,
+      combo: state.comboMult,
+      mistakes: self.mistakes,
+      answers: self.answers,
+      correct: self.correct,
+      answerMsTotal: (state.answerTimes.reduce((a, b) => a + b, 0) * 1000) | 0,
+      status: payload.status,
+      updatedAt: firebase.database.ServerValue.TIMESTAMP
+    });
+  }
+  sendOnline(payload);
+  updateOnlineBoards();
+}
+
+async function setReadyOnline() {
+  if (!state.online.connected || !state.online.myPlayerRef) return;
+  if (state.online.matchStatus !== "lobby") return;
+  if (Object.keys(state.online.peers).length + 1 < 2) {
+    showPopup(t("waitingPlayers"));
+    return;
+  }
+  state.online.ready = !state.online.ready;
+  const nextStatus = state.online.ready ? "ready" : "waiting";
+  await state.online.myPlayerRef.update({
+    ready: state.online.ready,
+    status: nextStatus,
+    avatarSeed: state.profile.avatarSeed || "avatar-1.png",
+    updatedAt: firebase.database.ServerValue.TIMESTAMP
+  });
+  showPopup(state.online.ready ? t("roomReadyOn") : t("roomReadyOff"));
+  updateRoomUI();
+}

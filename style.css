@@ -129,6 +129,62 @@ body {
   gap: 6px;
 }
 
+.player-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.player-row-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.player-row-left strong,
+.player-row-left p {
+  margin: 0;
+}
+
+.player-row-left p {
+  font-size: 12px;
+  color: #9ab0d9;
+}
+
+.player-row-right {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.player-row-right span {
+  display: block;
+  font-weight: 700;
+}
+
+.player-row-right small {
+  color: #9ab0d9;
+}
+
+.player-avatar-wrap {
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: radial-gradient(circle at 30% 30%, rgba(34, 211, 238, 0.35), rgba(10, 15, 26, 0.95));
+  box-shadow: 0 0 18px rgba(34, 211, 238, 0.12);
+}
+
+.player-avatar-wrap img,
+.player-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
 .player-card {
   display: flex;
   justify-content: space-between;
@@ -423,10 +479,20 @@ body {
 }
 
 #roomQrImage {
-  width: 128px;
-  height: 128px;
+  width: 140px;
+  height: 140px;
   border-radius: 8px;
+  display: grid;
+  place-items: center;
   background: #ffffff;
+  overflow: hidden;
+}
+
+#roomQrImage img,
+#roomQrImage canvas {
+  width: 128px !important;
+  height: 128px !important;
+  display: block;
 }
 
 .mode-status-bar {
