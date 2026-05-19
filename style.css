@@ -896,6 +896,45 @@ body {
   animation: fadeUp 0.28s ease;
 }
 
+.leaderboard-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: none;
+  place-items: center;
+  padding: 18px;
+  background: rgba(3, 5, 10, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.leaderboard-modal.show {
+  display: grid;
+}
+
+.leaderboard-modal-card {
+  width: min(760px, 96vw);
+  max-height: min(84vh, 860px);
+  padding: 16px;
+  overflow: auto;
+}
+
+.leaderboard-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.leaderboard-filters-full {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.leaderboard-modal-list {
+  max-height: min(60vh, 560px);
+}
+
 .chart-wrap {
   height: 190px;
   margin-top: 10px;
@@ -1073,6 +1112,14 @@ body {
     top: 36px;
     left: 8px;
   }
+
+  .leaderboard-modal-card {
+    padding: 12px;
+  }
+
+  .leaderboard-filters-full {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 680px) {
@@ -1086,5 +1133,75 @@ body {
 
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .online-actions,
+  .cert-actions {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
+  .hero-card,
+  .card,
+  .quiz-card,
+  .left-panel,
+  .profile-card,
+  .medals-card,
+  .online-card {
+    padding: 12px;
+  }
+
+  .hud h2 {
+    font-size: 1.25rem;
+  }
+
+  .timer-wrap {
+    width: 96px;
+    height: 96px;
+  }
+
+  .options-grid {
+    gap: 8px;
+  }
+
+  .option-btn {
+    min-height: 64px;
+  }
+
+  .leaderboard-filters,
+  .leaderboard-filters-full {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .leaderboard-modal-card {
+    width: min(94vw, 720px);
+  }
+}
+
+@media (max-width: 520px) {
+  .mode-select {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .leaderboard-filters,
+  .leaderboard-filters-full {
+    grid-template-columns: 1fr;
+  }
+
+  .question-top {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .hero-title {
+    font-size: 1.85rem;
+  }
+
+  .hero-card {
+    padding: 16px;
   }
 }

@@ -623,6 +623,14 @@ function localizedOptions(options) {
   return { ru: options.slice(), en: options.slice(), uz: options.slice() };
 }
 
+function makeLocalizedText(ru, en, uz) {
+  return { ru, en, uz };
+}
+
+function makeLocalizedOptions(ru, en, uz) {
+  return { ru: ru.slice(), en: en.slice(), uz: uz.slice() };
+}
+
 function createQuestion(id, level, question, options, correct) {
   return {
     id,
@@ -634,56 +642,60 @@ function createQuestion(id, level, question, options, correct) {
 }
 
 const EXTRA_QUESTION_DEFS = [
-  ["Junior", "Which keyword defines a function?", ["def", "func", "function", "define"], 0],
-  ["Junior", "Which type stores key-value pairs?", ["list", "set", "dict", "tuple"], 2],
-  ["Junior", "How to convert string '42' to int?", ["int('42')", "str(42)", "float('42')", "parseInt('42')"], 0],
-  ["Junior", "Which function prints output to console?", ["echo()", "println()", "print()", "write()"], 2],
-  ["Junior", "What does type(3.14) return?", ["int", "float", "str", "bool"], 1],
-  ["Junior", "Which value is boolean false?", ["'False'", "False", "0.0 only", "None only"], 1],
-  ["Junior", "How do you start a for loop?", ["for i in range(5):", "foreach i in range(5)", "for(i=0;i<5;i++)", "loop i in range(5):"], 0],
-  ["Junior", "Which operator means 'not equal'?", ["<>", "!==", "!=", "~="], 2],
-  ["Junior", "What does len([]) return?", ["0", "1", "None", "Error"], 0],
-  ["Junior", "Which one creates an empty dict?", ["[]", "()", "{}", "set()"], 2],
-  ["Junior", "What does list(range(3)) produce?", ["[1,2,3]", "[0,1,2]", "(0,1,2)", "[0,1,2,3]"], 1],
-  ["Junior", "How to read input from user?", ["scan()", "input()", "read()", "prompt()"], 1],
-  ["Junior", "Which value is returned by 10 // 3?", ["3.33", "3", "4", "1"], 1],
-  ["Junior", "Which statement handles exceptions?", ["catch", "except", "rescue", "trap"], 1],
-  ["Junior", "How to create an empty list?", ["{}", "[]", "()", "list{}"], 1],
-  ["Middle", "What does zip([1,2], ['a','b']) return iterator of?", ["pairs", "sum", "dict only", "set"], 0],
-  ["Middle", "Which method removes and returns last list item?", ["pop()", "remove()", "delete()", "shift()"], 0],
-  ["Middle", "What is result of 'py' * 3?", ["'pypypy'", "'py3'", "'py py py'", "Error"], 0],
-  ["Middle", "Which built-in creates an iterator from a sequence?", ["iter()", "next()", "yield()", "gen()"], 0],
-  ["Middle", "What does dict.get('x') return if missing and no default?", ["KeyError", "0", "None", "False"], 2],
-  ["Middle", "What is the purpose of __name__ == '__main__'?", ["import speed", "entry point check", "typing", "async control"], 1],
-  ["Middle", "What does sorted([3,1,2]) return?", ["[3,1,2]", "[1,2,3]", "(1,2,3)", "{1,2,3}"], 1],
-  ["Middle", "Which collection keeps unique elements?", ["list", "tuple", "set", "dict"], 2],
-  ["Middle", "What does map(function, iterable) return in Python 3?", ["list", "iterator", "tuple", "dict"], 1],
-  ["Middle", "Which module is used for regular expressions?", ["regex", "re", "regexp", "rx"], 1],
-  ["Middle", "What does pass do?", ["stops loop", "skips current iteration", "no-op placeholder", "returns None"], 2],
-  ["Middle", "Which statement skips to next loop iteration?", ["continue", "pass", "break", "next"], 0],
-  ["Middle", "How to merge two dicts in modern Python?", ["d1 + d2", "d1.merge(d2)", "{**d1, **d2}", "dict.join(d1,d2)"], 2],
-  ["Middle", "What does isinstance(x, int) check?", ["exact type only", "subclass-compatible type check", "value range", "memory size"], 1],
-  ["Middle", "Which one is true about tuples?", ["mutable", "ordered immutable", "unordered", "key-value only"], 1],
-  ["Senior", "What does @staticmethod mean?", ["method gets cls", "method gets self", "no implicit self/cls", "async method"], 2],
-  ["Senior", "What is result of next(iter([10,20]))?", ["20", "10", "0", "Error"], 1],
-  ["Senior", "Which method customizes object string for users?", ["__repr__", "__str__", "__format__", "__bytes__"], 1],
-  ["Senior", "What does __repr__ ideally provide?", ["user-friendly text", "unambiguous debug representation", "JSON only", "bytes"], 1],
-  ["Senior", "Which protocol enables 'with' statement?", ["iterator protocol", "descriptor protocol", "context manager protocol", "awaitable protocol"], 2],
-  ["Senior", "What is a closure?", ["class inside class", "function with preserved outer scope", "global variable", "decorator only"], 1],
-  ["Senior", "What does functools.lru_cache do?", ["encrypts data", "memoizes function results", "sorts arguments", "parallelizes calls"], 1],
-  ["Senior", "What is the difference between list and generator expression?", ["none", "generator is lazy", "list is lazy", "generator is mutable"], 1],
-  ["Senior", "Which call schedules coroutine execution?", ["await asyncio.create_task(coro())", "threading.Thread(coro)", "run(coro) always", "yield from task"], 0],
-  ["Senior", "What does raise from do?", ["silences exception", "chains exceptions explicitly", "retries function", "marks warning"], 1],
-  ["Senior", "Which dunder controls attribute access fallback?", ["__getattr__", "__setattr__", "__dir__", "__slots__"], 0],
-  ["Senior", "What does __slots__ primarily help with?", ["network speed", "reduce instance memory / attribute control", "thread safety", "serialization only"], 1],
-  ["Senior", "What is monkey patching?", ["runtime modification of objects/modules", "compiling to C", "type inference", "bytecode encryption"], 0],
-  ["Senior", "What does asyncio.gather return?", ["dict", "set", "results of awaitables", "generator of threads"], 2],
-  ["Senior", "Which isolation level issue is solved by locks in shared state?", ["syntax errors", "race conditions", "import cycles", "type mismatch"], 1]
+  { level: "Junior", q: makeLocalizedText("Каким ключевым словом объявляют функцию?", "Which keyword defines a function?", "Funksiya qaysi kalit so'z bilan e'lon qilinadi?"), options: makeLocalizedOptions(["def", "func", "function", "define"], ["def", "func", "function", "define"], ["def", "func", "function", "define"]), correct: 0 },
+  { level: "Junior", q: makeLocalizedText("Какой тип хранит пары ключ-значение?", "Which type stores key-value pairs?", "Qaysi tur kalit-qiymat juftliklarini saqlaydi?"), options: makeLocalizedOptions(["list", "set", "dict", "tuple"], ["list", "set", "dict", "tuple"], ["list", "set", "dict", "tuple"]), correct: 2 },
+  { level: "Junior", q: makeLocalizedText("Как преобразовать строку '42' в число?", "How to convert string '42' to int?", "'42' satrini butun songa qanday o'tkazish mumkin?"), options: makeLocalizedOptions(["int('42')", "str(42)", "float('42')", "parseInt('42')"], ["int('42')", "str(42)", "float('42')", "parseInt('42')"], ["int('42')", "str(42)", "float('42')", "parseInt('42')"]), correct: 0 },
+  { level: "Junior", q: makeLocalizedText("Какая функция выводит текст в консоль?", "Which function prints output to console?", "Qaysi funksiya konsolga chiqaradi?"), options: makeLocalizedOptions(["echo()", "println()", "print()", "write()"], ["echo()", "println()", "print()", "write()"], ["echo()", "println()", "print()", "write()"]), correct: 2 },
+  { level: "Junior", q: makeLocalizedText("Что вернет type(3.14)?", "What does type(3.14) return?", "type(3.14) nima qaytaradi?"), options: makeLocalizedOptions(["int", "float", "str", "bool"], ["int", "float", "str", "bool"], ["int", "float", "str", "bool"]), correct: 1 },
+  { level: "Junior", q: makeLocalizedText("Какое значение является логической ложью?", "Which value is boolean false?", "Qaysi qiymat mantiqiy yolg'on?"), options: makeLocalizedOptions(["'False'", "False", "0.0 only", "None only"], ["'False'", "False", "0.0 only", "None only"], ["'False'", "False", "0.0 only", "None only"]), correct: 1 },
+  { level: "Junior", q: makeLocalizedText("Как начинается цикл for в Python?", "How do you start a for loop?", "Pythonda for sikli qanday boshlanadi?"), options: makeLocalizedOptions(["for i in range(5):", "foreach i in range(5)", "for(i=0;i<5;i++)", "loop i in range(5):"], ["for i in range(5):", "foreach i in range(5)", "for(i=0;i<5;i++)", "loop i in range(5):"], ["for i in range(5):", "foreach i in range(5)", "for(i=0;i<5;i++)", "loop i in range(5):"]), correct: 0 },
+  { level: "Junior", q: makeLocalizedText("Какой оператор означает 'не равно'?", "Which operator means 'not equal'?", "Qaysi operator 'teng emas' degani?"), options: makeLocalizedOptions(["<>", "!==", "!=", "~="], ["<>", "!==", "!=", "~="], ["<>", "!==", "!=", "~="]), correct: 2 },
+  { level: "Junior", q: makeLocalizedText("Что вернет len([])?", "What does len([]) return?", "len([]) nima qaytaradi?"), options: makeLocalizedOptions(["0", "1", "None", "Error"], ["0", "1", "None", "Error"], ["0", "1", "None", "Error"]), correct: 0 },
+  { level: "Junior", q: makeLocalizedText("Что создаёт пустой словарь?", "Which one creates an empty dict?", "Bo'sh dict nimadan yaratiladi?"), options: makeLocalizedOptions(["[]", "()", "{}", "set()"], ["[]", "()", "{}", "set()"], ["[]", "()", "{}", "set()"]), correct: 2 },
+  { level: "Junior", q: makeLocalizedText("Что выдаст list(range(3))?", "What does list(range(3)) produce?", "list(range(3)) natijasi nima?"), options: makeLocalizedOptions(["[1,2,3]", "[0,1,2]", "(0,1,2)", "[0,1,2,3]"], ["[1,2,3]", "[0,1,2]", "(0,1,2)", "[0,1,2,3]"], ["[1,2,3]", "[0,1,2]", "(0,1,2)", "[0,1,2,3]"]), correct: 1 },
+  { level: "Junior", q: makeLocalizedText("Как получить ввод пользователя?", "How to read input from user?", "Foydalanuvchi kiritishini qanday olish mumkin?"), options: makeLocalizedOptions(["scan()", "input()", "read()", "prompt()"], ["scan()", "input()", "read()", "prompt()"], ["scan()", "input()", "read()", "prompt()"]), correct: 1 },
+  { level: "Junior", q: makeLocalizedText("Какой результат у 10 // 3?", "Which value is returned by 10 // 3?", "10 // 3 natijasi qancha?"), options: makeLocalizedOptions(["3.33", "3", "4", "1"], ["3.33", "3", "4", "1"], ["3.33", "3", "4", "1"]), correct: 1 },
+  { level: "Junior", q: makeLocalizedText("Какой блок обрабатывает исключения?", "Which statement handles exceptions?", "Qaysi operator xatolarni ushlaydi?"), options: makeLocalizedOptions(["catch", "except", "rescue", "trap"], ["catch", "except", "rescue", "trap"], ["catch", "except", "rescue", "trap"]), correct: 1 },
+  { level: "Junior", q: makeLocalizedText("Как создать пустой список?", "How to create an empty list?", "Bo'sh listni qanday yaratish mumkin?"), options: makeLocalizedOptions(["{}", "[]", "()", "list{}"], ["{}", "[]", "()", "list{}"], ["{}", "[]", "()", "list{}"]), correct: 1 },
+  { level: "Middle", q: makeLocalizedText("Что возвращает zip([1,2], ['a','b'])?", "What does zip([1,2], ['a','b']) return iterator of?", "zip([1,2], ['a','b']) nimaga iterator qaytaradi?"), options: makeLocalizedOptions(["pairs", "sum", "dict only", "set"], ["pairs", "sum", "dict only", "set"], ["pairs", "sum", "dict only", "set"]), correct: 0 },
+  { level: "Middle", q: makeLocalizedText("Какой метод удаляет и возвращает последний элемент списка?", "Which method removes and returns last list item?", "Ro'yxatning oxirgi elementini qaysi metod olib qaytaradi?"), options: makeLocalizedOptions(["pop()", "remove()", "delete()", "shift()"], ["pop()", "remove()", "delete()", "shift()"], ["pop()", "remove()", "delete()", "shift()"]), correct: 0 },
+  { level: "Middle", q: makeLocalizedText("Чему равно 'py' * 3?", "What is result of 'py' * 3?", "'py' * 3 natijasi nima?"), options: makeLocalizedOptions(["'pypypy'", "'py3'", "'py py py'", "Error"], ["'pypypy'", "'py3'", "'py py py'", "Error"], ["'pypypy'", "'py3'", "'py py py'", "Error"]), correct: 0 },
+  { level: "Middle", q: makeLocalizedText("Какой встроенный вызов создаёт итератор из последовательности?", "Which built-in creates an iterator from a sequence?", "Ketma-ketlikdan iteratorni qaysi built-in yaratadi?"), options: makeLocalizedOptions(["iter()", "next()", "yield()", "gen()"], ["iter()", "next()", "yield()", "gen()"], ["iter()", "next()", "yield()", "gen()"]), correct: 0 },
+  { level: "Middle", q: makeLocalizedText("Что вернёт dict.get('x'), если ключа нет и default не задан?", "What does dict.get('x') return if missing and no default?", "Kalit yo'q bo'lsa dict.get('x') nima qaytaradi?"), options: makeLocalizedOptions(["KeyError", "0", "None", "False"], ["KeyError", "0", "None", "False"], ["KeyError", "0", "None", "False"]), correct: 2 },
+  { level: "Middle", q: makeLocalizedText("Зачем нужен блок __name__ == '__main__'?", "What is the purpose of __name__ == '__main__'?", "__name__ == '__main__' blokining maqsadi nima?"), options: makeLocalizedOptions(["import speed", "entry point check", "typing", "async control"], ["import speed", "entry point check", "typing", "async control"], ["import speed", "entry point check", "typing", "async control"]), correct: 1 },
+  { level: "Middle", q: makeLocalizedText("Что вернёт sorted([3,1,2])?", "What does sorted([3,1,2]) return?", "sorted([3,1,2]) nima qaytaradi?"), options: makeLocalizedOptions(["[3,1,2]", "[1,2,3]", "(1,2,3)", "{1,2,3}"], ["[3,1,2]", "[1,2,3]", "(1,2,3)", "{1,2,3}"], ["[3,1,2]", "[1,2,3]", "(1,2,3)", "{1,2,3}"]), correct: 1 },
+  { level: "Middle", q: makeLocalizedText("Какая коллекция хранит только уникальные элементы?", "Which collection keeps unique elements?", "Qaysi to'plam faqat noyob elementlarni saqlaydi?"), options: makeLocalizedOptions(["list", "tuple", "set", "dict"], ["list", "tuple", "set", "dict"], ["list", "tuple", "set", "dict"]), correct: 2 },
+  { level: "Middle", q: makeLocalizedText("Что возвращает map(function, iterable) в Python 3?", "What does map(function, iterable) return in Python 3?", "Python 3 da map(...) nima qaytaradi?"), options: makeLocalizedOptions(["list", "iterator", "tuple", "dict"], ["list", "iterator", "tuple", "dict"], ["list", "iterator", "tuple", "dict"]), correct: 1 },
+  { level: "Middle", q: makeLocalizedText("Какой модуль используют для регулярных выражений?", "Which module is used for regular expressions?", "Muntazam ifodalar uchun qaysi modul ishlatiladi?"), options: makeLocalizedOptions(["regex", "re", "regexp", "rx"], ["regex", "re", "regexp", "rx"], ["regex", "re", "regexp", "rx"]), correct: 1 },
+  { level: "Middle", q: makeLocalizedText("Что делает pass?", "What does pass do?", "pass nima qiladi?"), options: makeLocalizedOptions(["stops loop", "skips current iteration", "no-op placeholder", "returns None"], ["stops loop", "skips current iteration", "no-op placeholder", "returns None"], ["stops loop", "skips current iteration", "no-op placeholder", "returns None"]), correct: 2 },
+  { level: "Middle", q: makeLocalizedText("Какой оператор переходит к следующей итерации цикла?", "Which statement skips to next loop iteration?", "Siklning keyingi iteratsiyasiga qaysi operator o'tadi?"), options: makeLocalizedOptions(["continue", "pass", "break", "next"], ["continue", "pass", "break", "next"], ["continue", "pass", "break", "next"]), correct: 0 },
+  { level: "Middle", q: makeLocalizedText("Как объединить два словаря в современном Python?", "How to merge two dicts in modern Python?", "Zamonaviy Python da ikki dictni qanday birlashtirish mumkin?"), options: makeLocalizedOptions(["d1 + d2", "d1.merge(d2)", "{**d1, **d2}", "dict.join(d1,d2)"], ["d1 + d2", "d1.merge(d2)", "{**d1, **d2}", "dict.join(d1,d2)"], ["d1 + d2", "d1.merge(d2)", "{**d1, **d2}", "dict.join(d1,d2)"]), correct: 2 },
+  { level: "Middle", q: makeLocalizedText("Что проверяет isinstance(x, int)?", "What does isinstance(x, int) check?", "isinstance(x, int) nimani tekshiradi?"), options: makeLocalizedOptions(["exact type only", "subclass-compatible type check", "value range", "memory size"], ["exact type only", "subclass-compatible type check", "value range", "memory size"], ["exact type only", "subclass-compatible type check", "value range", "memory size"]), correct: 1 },
+  { level: "Middle", q: makeLocalizedText("Какое утверждение верно для tuple?", "Which one is true about tuples?", "Tuple haqida qaysi fikr to'g'ri?"), options: makeLocalizedOptions(["mutable", "ordered immutable", "unordered", "key-value only"], ["mutable", "ordered immutable", "unordered", "key-value only"], ["mutable", "ordered immutable", "unordered", "key-value only"]), correct: 1 },
+  { level: "Senior", q: makeLocalizedText("Что означает @staticmethod?", "What does @staticmethod mean?", "@staticmethod nimani anglatadi?"), options: makeLocalizedOptions(["method gets cls", "method gets self", "no implicit self/cls", "async method"], ["method gets cls", "method gets self", "no implicit self/cls", "async method"], ["method gets cls", "method gets self", "no implicit self/cls", "async method"]), correct: 2 },
+  { level: "Senior", q: makeLocalizedText("Что вернёт next(iter([10,20]))?", "What is result of next(iter([10,20]))?", "next(iter([10,20])) natijasi nima?"), options: makeLocalizedOptions(["20", "10", "0", "Error"], ["20", "10", "0", "Error"], ["20", "10", "0", "Error"]), correct: 1 },
+  { level: "Senior", q: makeLocalizedText("Какой метод формирует строковое представление объекта для пользователя?", "Which method customizes object string for users?", "Obyektning foydalanuvchi uchun matn ko'rinishini qaysi metod belgilaydi?"), options: makeLocalizedOptions(["__repr__", "__str__", "__format__", "__bytes__"], ["__repr__", "__str__", "__format__", "__bytes__"], ["__repr__", "__str__", "__format__", "__bytes__"]), correct: 1 },
+  { level: "Senior", q: makeLocalizedText("Что обычно должен возвращать __repr__?", "What does __repr__ ideally provide?", "__repr__ odatda nimani qaytarishi kerak?"), options: makeLocalizedOptions(["user-friendly text", "unambiguous debug representation", "JSON only", "bytes"], ["user-friendly text", "unambiguous debug representation", "JSON only", "bytes"], ["user-friendly text", "unambiguous debug representation", "JSON only", "bytes"]), correct: 1 },
+  { level: "Senior", q: makeLocalizedText("Какой протокол нужен для 'with'?", "Which protocol enables 'with' statement?", "'with' uchun qaysi protokol kerak?"), options: makeLocalizedOptions(["iterator protocol", "descriptor protocol", "context manager protocol", "awaitable protocol"], ["iterator protocol", "descriptor protocol", "context manager protocol", "awaitable protocol"], ["iterator protocol", "descriptor protocol", "context manager protocol", "awaitable protocol"]), correct: 2 },
+  { level: "Senior", q: makeLocalizedText("Что такое closure?", "What is a closure?", "Closure nima?"), options: makeLocalizedOptions(["class inside class", "function with preserved outer scope", "global variable", "decorator only"], ["class inside class", "function with preserved outer scope", "global variable", "decorator only"], ["class inside class", "function with preserved outer scope", "global variable", "decorator only"]), correct: 1 },
+  { level: "Senior", q: makeLocalizedText("Что делает functools.lru_cache?", "What does functools.lru_cache do?", "functools.lru_cache nima qiladi?"), options: makeLocalizedOptions(["encrypts data", "memoizes function results", "sorts arguments", "parallelizes calls"], ["encrypts data", "memoizes function results", "sorts arguments", "parallelizes calls"], ["encrypts data", "memoizes function results", "sorts arguments", "parallelizes calls"]), correct: 1 },
+  { level: "Senior", q: makeLocalizedText("В чем отличие list comprehension от generator expression?", "What is the difference between list and generator expression?", "List comprehension va generator expression o'rtasidagi farq nima?"), options: makeLocalizedOptions(["none", "generator is lazy", "list is lazy", "generator is mutable"], ["none", "generator is lazy", "list is lazy", "generator is mutable"], ["none", "generator is lazy", "list is lazy", "generator is mutable"]), correct: 1 },
+  { level: "Senior", q: makeLocalizedText("Как корректно запланировать выполнение корутины?", "Which call schedules coroutine execution?", "Korutinani ishga tushirish uchun qaysi chaqiriq to'g'ri?"), options: makeLocalizedOptions(["await asyncio.create_task(coro())", "threading.Thread(coro)", "run(coro) always", "yield from task"], ["await asyncio.create_task(coro())", "threading.Thread(coro)", "run(coro) always", "yield from task"], ["await asyncio.create_task(coro())", "threading.Thread(coro)", "run(coro) always", "yield from task"]), correct: 0 },
+  { level: "Senior", q: makeLocalizedText("Что делает raise from?", "What does raise from do?", "raise from nima qiladi?"), options: makeLocalizedOptions(["silences exception", "chains exceptions explicitly", "retries function", "marks warning"], ["silences exception", "chains exceptions explicitly", "retries function", "marks warning"], ["silences exception", "chains exceptions explicitly", "retries function", "marks warning"]), correct: 1 },
+  { level: "Senior", q: makeLocalizedText("Какой dunder отвечает за fallback-доступ к атрибутам?", "Which dunder controls attribute access fallback?", "Atributga fallback murojaat uchun qaysi dunder javob beradi?"), options: makeLocalizedOptions(["__getattr__", "__setattr__", "__dir__", "__slots__"], ["__getattr__", "__setattr__", "__dir__", "__slots__"], ["__getattr__", "__setattr__", "__dir__", "__slots__"]), correct: 0 },
+  { level: "Senior", q: makeLocalizedText("Для чего в основном нужен __slots__?", "What does __slots__ primarily help with?", "__slots__ asosan nimaga yordam beradi?"), options: makeLocalizedOptions(["network speed", "reduce instance memory / attribute control", "thread safety", "serialization only"], ["network speed", "reduce instance memory / attribute control", "thread safety", "serialization only"], ["network speed", "reduce instance memory / attribute control", "thread safety", "serialization only"]), correct: 1 },
+  { level: "Senior", q: makeLocalizedText("Что такое monkey patching?", "What is monkey patching?", "Monkey patching nima?"), options: makeLocalizedOptions(["runtime modification of objects/modules", "compiling to C", "type inference", "bytecode encryption"], ["runtime modification of objects/modules", "compiling to C", "type inference", "bytecode encryption"], ["runtime modification of objects/modules", "compiling to C", "type inference", "bytecode encryption"]), correct: 0 },
+  { level: "Senior", q: makeLocalizedText("Что возвращает asyncio.gather?", "What does asyncio.gather return?", "asyncio.gather nima qaytaradi?"), options: makeLocalizedOptions(["dict", "set", "results of awaitables", "generator of threads"], ["dict", "set", "results of awaitables", "generator of threads"], ["dict", "set", "results of awaitables", "generator of threads"]), correct: 2 },
+  { level: "Senior", q: makeLocalizedText("Какую проблему в общем состоянии решают блокировки?", "Which isolation level issue is solved by locks in shared state?", "Umumiy holatda blokirovkalar qaysi muammoni hal qiladi?"), options: makeLocalizedOptions(["syntax errors", "race conditions", "import cycles", "type mismatch"], ["syntax errors", "race conditions", "import cycles", "type mismatch"], ["syntax errors", "race conditions", "import cycles", "type mismatch"]), correct: 1 }
 ];
 
-const EXTRA_QUESTIONS = EXTRA_QUESTION_DEFS.map((def, idx) =>
-  createQuestion(100 + idx, def[0], def[1], def[2], def[3])
-);
+const EXTRA_QUESTIONS = EXTRA_QUESTION_DEFS.map((def, idx) => ({
+  id: 100 + idx,
+  level: def.level,
+  q: def.q,
+  options: def.options,
+  correct: def.correct
+}));
 
 const QUESTIONS = [...BASE_QUESTIONS, ...EXTRA_QUESTIONS];
 
@@ -805,6 +817,11 @@ const dom = {
   modeButtons: Array.from(document.querySelectorAll(".mode-btn")),
   langButtons: Array.from(document.querySelectorAll(".lang-btn")),
   sortButtons: Array.from(document.querySelectorAll(".sort-btn")),
+  boardSortButtons: Array.from(document.querySelectorAll(".board-sort-btn")),
+  openLeaderboardBtn: document.getElementById("openLeaderboardBtn"),
+  closeLeaderboardBtn: document.getElementById("closeLeaderboardBtn"),
+  leaderboardModal: document.getElementById("leaderboardModal"),
+  leaderboardModalList: document.getElementById("leaderboardModalList"),
   roomInput: document.getElementById("roomInput"),
   onlineGameMode: document.getElementById("onlineGameMode"),
   createRoomBtn: document.getElementById("createRoomBtn"),
@@ -1000,8 +1017,48 @@ const AudioFX = {
 
 let inviteQrInstance = null;
 
+const EXTRA_I18N = {
+  ru: {
+    leaderboardOpen: "Таблица лидеров",
+    onlineSimpleOnly: "Режим: Простой",
+    sortTime: "По времени",
+    sortDate: "По дате"
+  },
+  en: {
+    leaderboardOpen: "Leaderboard",
+    onlineSimpleOnly: "Mode: Simple",
+    sortTime: "By Time",
+    sortDate: "By Date"
+  },
+  uz: {
+    leaderboardOpen: "Liderlar jadvali",
+    onlineSimpleOnly: "Rejim: Oddiy",
+    sortTime: "Vaqt bo'yicha",
+    sortDate: "Sana bo'yicha"
+  }
+};
+
+Object.assign(EXTRA_I18N.ru, {
+  copyInvite: "Копировать приглашение",
+  openInvite: "Открыть приглашение",
+  sortXp: "По XP",
+  sortSurvival: "Выживание"
+});
+Object.assign(EXTRA_I18N.en, {
+  copyInvite: "Copy Invite",
+  openInvite: "Open Invite",
+  sortXp: "By XP",
+  sortSurvival: "Survival"
+});
+Object.assign(EXTRA_I18N.uz, {
+  copyInvite: "Taklifni nusxalash",
+  openInvite: "Taklifni ochish",
+  sortXp: "XP bo'yicha",
+  sortSurvival: "Survival"
+});
+
 function t(key) {
-  return I18N[state.lang][key] || key;
+  return EXTRA_I18N[state.lang]?.[key] || I18N[state.lang][key] || key;
 }
 
 function getDefaultProfile() {
@@ -1016,7 +1073,7 @@ function getDefaultProfile() {
     totalAnswers: 0,
     totalCorrect: 0,
     favoriteMode: "classic",
-    modeCount: { classic: 0, survival: 0, multiplayer: 0, online: 0 },
+    modeCount: { classic: 0, online: 0 },
     achievements: [],
     medals: [],
     history: []
@@ -1236,6 +1293,7 @@ function renderAchievements() {
   const achieved = state.profile.achievements.slice().reverse();
   if (!achieved.length) {
     const li = document.createElement("li");
+    const rankBadge = leaderboardMedal(rank);
     li.textContent = "-";
     dom.achievementsList.appendChild(li);
     return;
@@ -1260,6 +1318,8 @@ function pushLeaderboardEntry(entry) {
 function renderLeaderboard() {
   const list = getGlobalLeaderboard();
   const sorted = list.slice().sort((a, b) => {
+    if (state.currentSort === "time") return (a.avgTimeSec || 999) - (b.avgTimeSec || 999);
+    if (state.currentSort === "date") return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
     if (state.currentSort === "xp") return b.xp - a.xp;
     if (state.currentSort === "wins") return b.wins - a.wins;
     if (state.currentSort === "survival") return b.survivalScore - a.survivalScore;
@@ -1275,9 +1335,46 @@ function renderLeaderboard() {
   sorted.slice(0, 15).forEach((row, idx) => {
     const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : "•";
     const li = document.createElement("li");
-    li.textContent = `${medal} ${row.player} | score ${row.score} | xp ${row.xp} | wins ${row.wins}`;
+    const avg = Number.isFinite(Number(row.avgTimeSec)) ? `${Number(row.avgTimeSec).toFixed(1)}s` : "-";
+    const playedAt = row.date ? new Date(row.date).toLocaleString() : "-";
+    li.textContent = `${rankBadge} ${row.player} | score ${row.score} | xp ${row.xp} | wins ${row.wins} | avg ${avg} | ${playedAt}`;
     dom.globalLeaderboardList.appendChild(li);
   });
+}
+
+function renderLeaderboardModal() {
+  if (!dom.leaderboardModalList) return;
+  const list = getGlobalLeaderboard();
+  const sorted = list.slice().sort((a, b) => {
+    if (state.currentSort === "time") return (a.avgTimeSec || 999) - (b.avgTimeSec || 999);
+    if (state.currentSort === "date") return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+    if (state.currentSort === "xp") return b.xp - a.xp;
+    if (state.currentSort === "wins") return b.wins - a.wins;
+    return b.score - a.score;
+  });
+  dom.leaderboardModalList.innerHTML = "";
+  if (!sorted.length) {
+    const li = document.createElement("li");
+    li.textContent = "-";
+    dom.leaderboardModalList.appendChild(li);
+    return;
+  }
+  sorted.slice(0, 50).forEach((row, idx) => {
+    const rank = idx + 1;
+    const medal = rank === 1 ? "рџҐ‡" : rank === 2 ? "рџҐ€" : rank === 3 ? "рџҐ‰" : `${rank}.`;
+    const avg = Number.isFinite(Number(row.avgTimeSec)) ? `${Number(row.avgTimeSec).toFixed(1)}s` : "-";
+    const playedAt = row.date ? new Date(row.date).toLocaleString() : "-";
+    const li = document.createElement("li");
+    li.textContent = `${medal} ${row.player} | score ${row.score} | xp ${row.xp} | wins ${row.wins} | avg ${avg} | ${playedAt}`;
+    dom.leaderboardModalList.appendChild(li);
+  });
+}
+
+function leaderboardMedal(rank) {
+  if (rank === 1) return "🥇";
+  if (rank === 2) return "🥈";
+  if (rank === 3) return "🥉";
+  return `${rank}.`;
 }
 
 function showPopup(text) {
@@ -1383,13 +1480,21 @@ function getQuestionById(id) {
   return QUESTIONS.find(q => q.id === id);
 }
 
+function getQuestionPool() {
+  // RU mode uses only base curated Russian set to avoid mixed-language appearance.
+  if (state.lang === "ru") return BASE_QUESTIONS.slice();
+  return QUESTIONS;
+}
+
 function localizeQuestion(baseQuestion) {
+  const questionText = baseQuestion.q?.[state.lang] || baseQuestion.q?.ru || baseQuestion.q?.en || "";
+  const options = baseQuestion.options?.[state.lang] || baseQuestion.options?.ru || baseQuestion.options?.en || [];
   return {
     id: baseQuestion.id,
     level: LEVEL_LABELS[state.lang][baseQuestion.level],
     levelRaw: baseQuestion.level,
-    q: baseQuestion.q[state.lang],
-    options: baseQuestion.options[state.lang],
+    q: questionText,
+    options: options.slice(0, 4),
     correct: baseQuestion.correct
   };
 }
@@ -1412,10 +1517,11 @@ function randomDifficultyForScore(score) {
 }
 
 function buildQuestionSetByDistribution(distribution) {
+  const poolSource = getQuestionPool();
   const usedIds = new Set();
   const result = [];
   Object.entries(distribution).forEach(([level, count]) => {
-    const pool = shuffle(QUESTIONS.filter(q => q.level === level));
+    const pool = shuffle(poolSource.filter(q => q.level === level));
     for (let i = 0; i < count; i += 1) {
       const candidate = pool[i % pool.length];
       if (!candidate) continue;
@@ -1432,7 +1538,7 @@ function buildQuestionSetByDistribution(distribution) {
     }
   });
   if (result.length < 20) {
-    const backup = shuffle(QUESTIONS.filter(q => !usedIds.has(q.id)));
+    const backup = shuffle(poolSource.filter(q => !usedIds.has(q.id)));
     while (result.length < 20 && backup.length) {
       const q = backup.pop();
       result.push(q);
@@ -1473,12 +1579,7 @@ function withShuffledAnswers(question) {
 }
 
 const ONLINE_MODE_LABELS = {
-  simple: "Simple",
-  space_pvp: "Space PvP",
-  zombie_coop: "Zombie City",
-  gold_rush: "Gold Rush",
-  racing: "Racing",
-  crypto_hack: "Crypto Hack"
+  simple: "Simple"
 };
 
 function onlineModeLabel(mode) {
@@ -1536,31 +1637,8 @@ function getRoomPlayerIds() {
 
 function updateModeStatusBar() {
   if (!dom.modeStatusBar) return;
-  const mode = state.online.gameMode || "simple";
-  const self = getOnlineSelfEntry();
-  const s = state.online.modeState || {};
-  dom.onlineModeBadge.textContent = `Mode: ${onlineModeLabel(mode)}`;
-  dom.cryptoActions.classList.toggle("show", mode === "crypto_hack" && state.mode === "online");
-  if (mode === "space_pvp") {
-    dom.modeStatusBar.textContent = `HP: ${safeNumber(self.hp, 100)} | Shield: ${safeNumber(self.shield, 0)}`;
-    return;
-  }
-  if (mode === "zombie_coop") {
-    dom.modeStatusBar.textContent = `Wall HP: ${safeNumber(s.wallHp, 500)} | Night: ${safeNumber(s.night, 0)}/5 | Zombies: ${safeNumber(s.zombies, 0)}`;
-    return;
-  }
-  if (mode === "gold_rush") {
-    dom.modeStatusBar.textContent = `Gold: ${safeNumber(self.gold, 0)} | Event in: ${Math.max(0, Math.ceil((safeNumber(s.nextEventAt, 0) - Date.now()) / 1000))}s`;
-    return;
-  }
-  if (mode === "racing") {
-    dom.modeStatusBar.textContent = `Track: ${safeNumber(self.steps, 0)}/10`;
-    return;
-  }
-  if (mode === "crypto_hack") {
-    dom.modeStatusBar.textContent = `Coins: ${safeNumber(self.coins, 100)} | Shield: ${safeNumber(self.cryptoShield, 0)} | Mining: ${safeNumber(self.mining, 0)}`;
-    return;
-  }
+  dom.onlineModeBadge.textContent = `Mode: ${onlineModeLabel("simple")}`;
+  if (dom.cryptoActions) dom.cryptoActions.classList.remove("show");
   dom.modeStatusBar.textContent = "Standard online scoring";
 }
 
@@ -1587,8 +1665,8 @@ function updateRoomUI() {
   dom.readyBtn.classList.toggle("active", state.online.ready);
   dom.readyBtn.textContent = state.online.ready ? `${t("readyBtn")} ✓` : t("readyBtn");
   if (dom.onlineGameMode) {
-    dom.onlineGameMode.value = state.online.gameMode || "simple";
-    dom.onlineGameMode.disabled = !state.online.isHost || !inLobby;
+    dom.onlineGameMode.value = "simple";
+    dom.onlineGameMode.disabled = true;
   }
   if (dom.startBtn) {
     dom.startBtn.disabled = state.mode === "online" && (!state.online.connected || !state.online.isHost || !hasMinPlayers || !inLobby);
@@ -1601,6 +1679,7 @@ function updateRoomUI() {
 }
 
 function setMode(mode) {
+  if (mode !== "classic" && mode !== "online") mode = "classic";
   state.mode = mode;
   dom.modeButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.mode === mode));
   dom.player2Fields.classList.toggle("show", mode === "multiplayer");
@@ -1742,13 +1821,14 @@ function getCurrentQuestion() {
 }
 
 function pickSurvivalQuestion() {
+  const poolSource = getQuestionPool();
   const desiredLevel = randomDifficultyForScore(state.score);
   const levels = [desiredLevel, "Middle", "Junior", "Senior"];
 
   for (let i = 0; i < levels.length; i += 1) {
     const level = levels[i];
     if (!state.survivalPools[level] || state.survivalPools[level].length === 0) {
-      state.survivalPools[level] = shuffle(QUESTIONS.filter(q => q.level === level));
+      state.survivalPools[level] = shuffle(poolSource.filter(q => q.level === level));
     }
     const pool = state.survivalPools[level];
     if (!pool.length) continue;
@@ -1764,7 +1844,7 @@ function pickSurvivalQuestion() {
     return withShuffledAnswers(localizeQuestion(base));
   }
 
-  const fallback = QUESTIONS[Math.floor(Math.random() * QUESTIONS.length)];
+  const fallback = poolSource[Math.floor(Math.random() * poolSource.length)];
   state.survivalLastId = fallback.id;
   return withShuffledAnswers(localizeQuestion(fallback));
 }
@@ -2354,6 +2434,9 @@ function finishGame() {
     score: state.score,
     xp: p.totalXP,
     wins: p.wins,
+    accuracy,
+    mistakes: state.players[0].mistakes || state.mistakes || 0,
+    avgTimeSec: Number(avg.toFixed(2)),
     survivalScore: state.mode === "survival" ? state.score : 0,
     date: new Date().toISOString()
   });
@@ -2445,7 +2528,7 @@ function drawCertificate(accuracy) {
   const nameAreaEndX = 956;
   const nameAreaCenterX = (nameAreaStartX + nameAreaEndX) / 2;
   const nameAreaMaxWidth = nameAreaEndX - nameAreaStartX;
-  const nameY = 515;
+  const nameY = 514;
   ctx.clearRect(0, 0, w, h);
   const hasBg = drawImageIfReady(ctx, "certBackground", 0, 0, w, h);
   if (!hasBg) {
@@ -2455,41 +2538,13 @@ function drawCertificate(accuracy) {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
   }
-  if (!drawImageIfReady(ctx, "certFrame", 0, 0, w, h)) {
-    ctx.strokeStyle = "rgba(34,211,238,0.8)";
-    ctx.lineWidth = 8;
-    ctx.strokeRect(24, 24, w - 48, h - 48);
-    ctx.strokeStyle = "rgba(255,78,205,0.45)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(50, 50, w - 100, h - 100);
-  }
   ctx.textAlign = "center";
-  ctx.fillStyle = "#c8dcff";
-  ctx.font = "700 34px Orbitron, Arial";
-  ctx.fillText("PYTHON NEON ARENA", w / 2, 140);
-  ctx.fillStyle = "#f2f8ff";
-  ctx.font = "700 72px Orbitron, Arial";
-  ctx.fillText("CERTIFICATE", w / 2, 230);
-  ctx.font = "500 34px Inter, Arial";
-  ctx.fillStyle = "#d4e4ff";
-  ctx.fillText("Awarded to", w / 2, 315);
   ctx.font = "700 58px Inter, Arial";
   ctx.fillStyle = "#22d3ee";
+  ctx.shadowColor = "rgba(34, 211, 238, 0.45)";
+  ctx.shadowBlur = 18;
   ctx.fillText(name, nameAreaCenterX, nameY, nameAreaMaxWidth);
-  ctx.fillStyle = "#dbe9ff";
-  ctx.font = "500 30px Inter, Arial";
-  ctx.fillText(`Score: ${state.score} | Accuracy: ${accuracy}% | Level: ${state.level}`, w / 2, 610);
-  ctx.fillText(`Date: ${new Date().toLocaleDateString()}`, w / 2, 655);
-  drawImageIfReady(ctx, "certSeal", w - 260, h - 260, 180, 180);
-  if (drawImageIfReady(ctx, "certSignature", w / 2 - 240, 700, 480, 150)) {
-    ctx.fillStyle = "#d4e4ff";
-    ctx.font = "500 22px Inter, Arial";
-    ctx.fillText("Python Arena Board", w / 2, 845);
-    return;
-  }
-  ctx.fillStyle = "#ff9de8";
-  ctx.font = "500 26px Inter, Arial";
-  ctx.fillText("Signature: Python Arena Board", w / 2, 700);
+  ctx.shadowBlur = 0;
 }
 
 function downloadPng() {
@@ -3401,30 +3456,42 @@ function bindEvents() {
   dom.joinRoomBtn.addEventListener("click", () => joinRoom().catch(() => showPopup(t("roomJoinFail"))));
   dom.readyBtn.addEventListener("click", () => setReadyOnline().catch(() => showPopup(t("roomJoinFail"))));
   dom.leaveRoomBtn.addEventListener("click", () => leaveRoom().catch(() => showPopup(t("roomJoinFail"))));
-  if (dom.onlineGameMode) {
-    dom.onlineGameMode.addEventListener("change", async e => {
-      const mode = e.target.value || "simple";
-      state.online.gameMode = mode;
-      if (state.online.connected && state.online.isHost && state.online.matchStatus === "lobby" && state.online.stateRef) {
-        try {
-          await state.online.stateRef.update({
-            mode,
-            updatedAt: firebase.database.ServerValue.TIMESTAMP
-          });
-        } catch (_err) {
-          // ignore
-        }
-      }
-      updateRoomUI();
+  if (dom.openLeaderboardBtn && dom.leaderboardModal) {
+    dom.openLeaderboardBtn.addEventListener("click", () => {
+      dom.leaderboardModal.classList.add("show");
+      dom.leaderboardModal.setAttribute("aria-hidden", "false");
+      renderLeaderboardModal();
     });
   }
+  if (dom.closeLeaderboardBtn && dom.leaderboardModal) {
+    dom.closeLeaderboardBtn.addEventListener("click", () => {
+      dom.leaderboardModal.classList.remove("show");
+      dom.leaderboardModal.setAttribute("aria-hidden", "true");
+    });
+  }
+  if (dom.leaderboardModal) {
+    dom.leaderboardModal.addEventListener("click", e => {
+      if (e.target === dom.leaderboardModal) {
+        dom.leaderboardModal.classList.remove("show");
+        dom.leaderboardModal.setAttribute("aria-hidden", "true");
+      }
+    });
+  }
+  dom.boardSortButtons.forEach(btn => btn.addEventListener("click", () => {
+    const next = btn.dataset.boardSort || "score";
+    state.currentSort = next;
+    dom.boardSortButtons.forEach(b => b.classList.toggle("active", b.dataset.boardSort === next));
+    dom.sortButtons.forEach(b => b.classList.toggle("active", b.dataset.sort === next));
+    renderLeaderboard();
+    renderLeaderboardModal();
+  }));
   if (dom.copyInviteBtn) {
     dom.copyInviteBtn.addEventListener("click", async () => {
       if (!state.online.roomCode) return;
       const link = getInviteUrl(state.online.roomCode);
       try {
         await navigator.clipboard.writeText(link);
-        showPopup("Invite copied");
+        showPopup(t("copyInvite"));
       } catch (_err) {
         showPopup(link);
       }

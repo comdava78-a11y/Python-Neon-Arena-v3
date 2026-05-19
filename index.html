@@ -59,6 +59,7 @@
         <button class="lang-btn" data-lang="en">EN</button>
         <button class="lang-btn" data-lang="uz">UZ</button>
       </div>
+      <button id="openLeaderboardBtn" class="neo-btn" data-i18n="leaderboardOpen">Leaderboard</button>
 
       <section class="profile-card glass-inner">
         <h3 data-i18n="profileTitle">Профиль игрока</h3>
@@ -82,15 +83,7 @@
 
       <section class="online-card glass-inner">
         <h3 data-i18n="onlineTitle">Online Multiplayer</h3>
-        <label for="onlineGameMode" class="small-label">Online Mode</label>
-        <select id="onlineGameMode" class="neo-input">
-          <option value="simple">Простой</option>
-          <option value="space_pvp">Космический шутер (PvP)</option>
-          <option value="zombie_coop">Зомби-город (Co-op)</option>
-          <option value="gold_rush">Золотая лихорадка</option>
-          <option value="racing">Гонки</option>
-          <option value="crypto_hack">Крипто-взлом</option>
-        </select>
+        <p class="small-label" data-i18n="onlineSimpleOnly">Mode: Simple</p>
         <input id="roomInput" class="neo-input" type="text" placeholder="arena-room">
         <div class="online-actions">
           <button id="createRoomBtn" class="neo-btn" data-i18n="createRoom">Create Room</button>
@@ -105,8 +98,8 @@
         <p><span data-i18n="matchStatus">Match status</span>: <strong id="matchStatusText">lobby</strong></p>
         <p><span data-i18n="onlinePlayers">Игроков в комнате</span>: <strong id="onlinePlayersCount">0</strong></p>
         <div class="online-actions">
-          <button id="copyInviteBtn" class="neo-btn">Copy Invite</button>
-          <button id="openInviteBtn" class="neo-btn">Open Invite</button>
+          <button id="copyInviteBtn" class="neo-btn" data-i18n="copyInvite">Copy Invite</button>
+          <button id="openInviteBtn" class="neo-btn" data-i18n="openInvite">Open Invite</button>
         </div>
         <div id="roomQrWrap" class="room-qr-wrap">
           <div id="roomQrImage" aria-label="Room QR"></div>
@@ -254,9 +247,9 @@
             <h3 data-i18n="globalLeaderboard">Глобальный рейтинг</h3>
             <div class="leaderboard-filters">
               <button class="sort-btn active" data-sort="score" data-i18n="sortScore">По очкам</button>
-              <button class="sort-btn" data-sort="xp">По XP</button>
+              <button class="sort-btn" data-sort="xp" data-i18n="sortXp">По XP</button>
               <button class="sort-btn" data-sort="wins" data-i18n="sortWins">По победам</button>
-              <button class="sort-btn" data-sort="survival">Survival</button>
+              <button class="sort-btn" data-sort="survival" data-i18n="sortSurvival">Выживание</button>
             </div>
             <ul id="globalLeaderboardList" class="leaderboard-list"></ul>
             <h3 data-i18n="achievementsTitle">Достижения</h3>
@@ -278,6 +271,22 @@
 
   <div id="achievementPopup" class="achievement-popup"></div>
   <div id="battlePopup" class="battle-popup"></div>
+  <div id="leaderboardModal" class="leaderboard-modal" aria-hidden="true">
+    <div class="leaderboard-modal-card glass" role="dialog" aria-modal="true" aria-labelledby="leaderboardModalTitle">
+      <div class="leaderboard-modal-head">
+        <h3 id="leaderboardModalTitle" data-i18n="globalLeaderboard">Global Leaderboard</h3>
+        <button id="closeLeaderboardBtn" class="neo-btn small" type="button">X</button>
+      </div>
+      <div class="leaderboard-filters leaderboard-filters-full">
+        <button class="sort-btn board-sort-btn active" data-board-sort="score" data-i18n="sortScore">By Score</button>
+        <button class="sort-btn board-sort-btn" data-board-sort="xp" data-i18n="sortXp">By XP</button>
+        <button class="sort-btn board-sort-btn" data-board-sort="wins" data-i18n="sortWins">By Wins</button>
+        <button class="sort-btn board-sort-btn" data-board-sort="time" data-i18n="sortTime">By Time</button>
+        <button class="sort-btn board-sort-btn" data-board-sort="date" data-i18n="sortDate">By Date</button>
+      </div>
+      <ul id="leaderboardModalList" class="leaderboard-list leaderboard-modal-list"></ul>
+    </div>
+  </div>
   <footer class="signature">Сделал ученик 10А класса Русинов Давид</footer>
 
   <script>
