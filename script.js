@@ -1292,8 +1292,8 @@ function renderAchievements() {
   dom.achievementsList.innerHTML = "";
   const achieved = state.profile.achievements.slice().reverse();
   if (!achieved.length) {
+    
     const li = document.createElement("li");
-    const rankBadge = leaderboardMedal(rank);
     li.textContent = "-";
     dom.achievementsList.appendChild(li);
     return;
@@ -1337,7 +1337,7 @@ function renderLeaderboard() {
     const li = document.createElement("li");
     const avg = Number.isFinite(Number(row.avgTimeSec)) ? `${Number(row.avgTimeSec).toFixed(1)}s` : "-";
     const playedAt = row.date ? new Date(row.date).toLocaleString() : "-";
-    li.textContent = `${rankBadge} ${row.player} | score ${row.score} | xp ${row.xp} | wins ${row.wins} | avg ${avg} | ${playedAt}`;
+    li.textContent = `${medal} ${row.player} | score ${row.score} | xp ${row.xp} | wins ${row.wins} | avg ${avg} | ${playedAt}`;
     dom.globalLeaderboardList.appendChild(li);
   });
 }
@@ -3198,6 +3198,86 @@ async function setReadyOnline() {
     });
   showPopup(state.online.ready ? t("roomReadyOn") : t("roomReadyOff"));
   updateRoomUI();
+}
+
+// Hotfix: safe renderers for achievements/leaderboard.
+function renderAchievements() {
+  if (!dom.achievementsList) return;
+  dom.achievementsList.innerHTML = "";
+  const achieved = Array.isArray(state.profile?.achievements) ? state.profile.achievements.slice().reverse() : [];
+  if (!achieved.length) {
+    const li = document.createElement("li");
+    li.textContent = "-";
+    dom.achievementsList.appendChild(li);
+    return;
+  }
+  achieved.slice(0, 12).forEach(item => {
+    const li = document.createElement("li");
+    li.textContent = `${item.title} | ${item.date}`;
+    dom.achievementsList.appendChild(li);
+  });
+}
+
+function renderLeaderboard() {
+  if (!dom.globalLeaderboardList) return;
+  const list = getGlobalLeaderboard();
+  const sorted = list.slice().sort((a, b) => {
+    if (state.currentSort === "time") return (a.avgTimeSec || 999) - (b.avgTimeSec || 999);
+    if (state.currentSort === "date") return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+    if (state.currentSort === "xp") return (b.xp || 0) - (a.xp || 0);
+    if (state.currentSort === "wins") return (b.wins || 0) - (a.wins || 0);
+    if (state.currentSort === "survival") return (b.survivalScore || 0) - (a.survivalScore || 0);
+    return (b.score || 0) - (a.score || 0);
+  });
+  dom.globalLeaderboardList.innerHTML = "";
+  if (!sorted.length) {
+    const li = document.createElement("li");
+    li.textContent = "-";
+    dom.globalLeaderboardList.appendChild(li);
+    return;
+  }
+  sorted.slice(0, 15).forEach((row, idx) => {
+    const badge = leaderboardMedal(idx + 1);
+    const li = document.createElement("li");
+    const avg = Number.isFinite(Number(row.avgTimeSec)) ? `${Number(row.avgTimeSec).toFixed(1)}s` : "-";
+    const playedAt = row.date ? new Date(row.date).toLocaleString() : "-";
+    li.textContent = `${badge} ${row.player} | score ${row.score || 0} | xp ${row.xp || 0} | wins ${row.wins || 0} | avg ${avg} | ${playedAt}`;
+    dom.globalLeaderboardList.appendChild(li);
+  });
+}
+
+function renderLeaderboardModal() {
+  if (!dom.leaderboardModalList) return;
+  const list = getGlobalLeaderboard();
+  const sorted = list.slice().sort((a, b) => {
+    if (state.currentSort === "time") return (a.avgTimeSec || 999) - (b.avgTimeSec || 999);
+    if (state.currentSort === "date") return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+    if (state.currentSort === "xp") return (b.xp || 0) - (a.xp || 0);
+    if (state.currentSort === "wins") return (b.wins || 0) - (a.wins || 0);
+    return (b.score || 0) - (a.score || 0);
+  });
+  dom.leaderboardModalList.innerHTML = "";
+  if (!sorted.length) {
+    const li = document.createElement("li");
+    li.textContent = "-";
+    dom.leaderboardModalList.appendChild(li);
+    return;
+  }
+  sorted.slice(0, 50).forEach((row, idx) => {
+    const badge = leaderboardMedal(idx + 1);
+    const avg = Number.isFinite(Number(row.avgTimeSec)) ? `${Number(row.avgTimeSec).toFixed(1)}s` : "-";
+    const playedAt = row.date ? new Date(row.date).toLocaleString() : "-";
+    const li = document.createElement("li");
+    li.textContent = `${badge} ${row.player} | score ${row.score || 0} | xp ${row.xp || 0} | wins ${row.wins || 0} | avg ${avg} | ${playedAt}`;
+    dom.leaderboardModalList.appendChild(li);
+  });
+}
+
+function leaderboardMedal(rank) {
+  if (rank === 1) return "#1";
+  if (rank === 2) return "#2";
+  if (rank === 3) return "#3";
+  return `${rank}.`;
 }
 
 function sendOnline(payload) {
